@@ -1,0 +1,13 @@
+services:
+  civitas-access:
+    build: .
+    ports:
+      - '8790:8790'
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_PATH: /app/data/push.sqlite
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
