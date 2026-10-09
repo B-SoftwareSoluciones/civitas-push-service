@@ -10,6 +10,8 @@ export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  priority?: 'default' | 'normal' | 'high';
+  channelId?: string;
 }
 
 export interface PushRecipient {
@@ -39,6 +41,8 @@ export async function sendPush(
     title: payload.title,
     body: payload.body,
     data: payload.data ?? {},
+    ...(payload.priority ? { priority: payload.priority } : {}),
+    ...(payload.channelId ? { channelId: payload.channelId } : {}),
   }));
 
   let sent = 0;

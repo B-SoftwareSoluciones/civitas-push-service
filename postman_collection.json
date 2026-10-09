@@ -1,0 +1,308 @@
+{
+  "info": {
+    "_postman_id": "c1v1t4s-4cc3-0000-0000-000000000001",
+    "name": "Civitas Access API",
+    "description": "API de registro de dispositivos y envío de notificaciones push (Expo) de Civitas Access.\n\nEndpoints bajo /v1. Documentación interactiva en /doc (OpenAPI) y /ui (Swagger UI).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8790",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "device-123",
+      "type": "string"
+    },
+    {
+      "key": "expoToken",
+      "value": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Comprueba que el servidor está en marcha."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Listar dispositivos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('respuesta ok', () => pm.expect(pm.response.json()).to.have.property('ok', true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "devices"]
+            },
+            "description": "Devuelve todos los dispositivos registrados ordenados por última conexión."
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar / actualizar dispositivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('respuesta ok', () => pm.expect(pm.response.json()).to.have.property('ok', true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"platform\": \"android\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "devices"]
+            },
+            "description": "Registra o actualiza un dispositivo (upsert)."
+          },
+          "response": []
+        },
+        {
+          "name": "Sincronizar dispositivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('respuesta ok', () => pm.expect(pm.response.json()).to.have.property('ok', true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"platform\": \"android\",\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/devices/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "devices", "sync"]
+            },
+            "description": "Sincroniza un dispositivo. Acepta opcionalmente un array 'items'."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar dispositivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('respuesta ok', () => pm.expect(pm.response.json()).to.have.property('ok', true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/devices/{{deviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "devices", "{{deviceId}}"],
+              "variable": [
+                {
+                  "key": "deviceId",
+                  "value": "{{deviceId}}"
+                }
+              ]
+            },
+            "description": "Elimina un dispositivo por su id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notify",
+      "item": [
+        {
+          "name": "Enviar notificación push",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('respuesta esperada', () => pm.expect([200, 400, 502]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Civitas Access\",\n  \"message\": \"Tienes una visita en la puerta.\",\n  \"url\": \"app://visit/123\",\n  \"data\": {\n    \"type\": \"visit_registered\",\n    \"screen\": \"AccessPass\",\n    \"visitId\": \"VIS-0001\",\n    \"propertyId\": 456,\n    \"residenceId\": 2\n  },\n  \"priority\": \"high\",\n  \"channelId\": \"default\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notify",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "notify"]
+            },
+            "description": "Registra el dispositivo y envía una notificación push a través de Expo.\n\n`data.screen` indica la pantalla a abrir en la app (si se omite, se asume \"Home\"). `url` es un deep link opcional.\n\n- 200: enviada\n- 400: cuerpo inválido o token de Expo inválido\n- 502: fallo al enviar"
+          },
+          "response": []
+        },
+        {
+          "name": "Visita registrada (ejemplo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Visita registrada\",\n  \"message\": \"Juan Pérez fue registrado en tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_registered\",\n    \"visitId\": \"VIS-0001\",\n    \"propertyId\": 456,\n    \"residenceId\": 2,\n    \"screen\": \"AccessPass\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notify",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "notify"]
+            },
+            "description": "Notificación al propietario de una propiedad cuando se registra una visita."
+          },
+          "response": []
+        },
+        {
+          "name": "Pánico (ejemplo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"🚨 PÁNICO\",\n  \"message\": \"Botón de pánico activado en Casa 4\",\n  \"data\": {\n    \"type\": \"panic\",\n    \"residenceId\": 2,\n    \"propertyId\": 456,\n    \"screen\": \"SecurityDashboard\"\n  },\n  \"priority\": \"high\",\n  \"channelId\": \"panic\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notify",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "notify"]
+            },
+            "description": "Alerta de pánico a los guardias del residencial."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documentación",
+      "item": [
+        {
+          "name": "OpenAPI JSON (/doc)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/doc",
+              "host": ["{{baseUrl}}"],
+              "path": ["doc"]
+            },
+            "description": "Especificación OpenAPI 3.0.0 generada por el servidor. Puede importarse en Postman o usarse con Swagger UI en /ui."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

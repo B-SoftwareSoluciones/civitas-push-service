@@ -70,7 +70,7 @@ export const baseCss = `
   .muted { color: var(--muted); }
   .small { font-size: 0.78rem; }
   label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.9rem; }
-  input, textarea {
+  input, textarea, select {
     width: 100%;
     margin-top: 0.35rem;
     padding: 0.7rem 0.85rem;
@@ -84,7 +84,7 @@ export const baseCss = `
     transition: border-color 0.15s, box-shadow 0.15s;
   }
   input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.7; }
-  input:focus, textarea:focus {
+  input:focus, textarea:focus, select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--focus-ring);
   }

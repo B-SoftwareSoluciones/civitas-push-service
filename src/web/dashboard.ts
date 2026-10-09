@@ -69,10 +69,42 @@ export function dashboardPage(user: string): string {
             <label>Título <span class="muted small">(opcional)</span>
               <input id="title" placeholder="Notificación" />
             </label>
-            <label>URL <span class="muted small">(opcional)</span>
+            <label>URL <span class="muted small">(opcional · si se omite abre Home)</span>
               <input id="url" placeholder="/visitas/..." />
             </label>
           </div>
+          <div class="row">
+            <label>Tipo <span class="muted small">(opcional)</span>
+              <input id="type" placeholder="visit_registered" />
+            </label>
+            <label>Pantalla <span class="muted small">(opcional · Home por defecto)</span>
+              <input id="screen" placeholder="Home" />
+            </label>
+          </div>
+          <div class="row">
+            <label>Visit ID <span class="muted small">(opcional)</span>
+              <input id="visitId" placeholder="VIS-0001" />
+            </label>
+            <label>Property ID <span class="muted small">(opcional)</span>
+              <input id="propertyId" type="number" placeholder="456" />
+            </label>
+          </div>
+          <div class="row">
+            <label>Residence ID <span class="muted small">(opcional)</span>
+              <input id="residenceId" type="number" placeholder="2" />
+            </label>
+            <label>Prioridad <span class="muted small">(opcional)</span>
+              <select id="priority">
+                <option value="">Por defecto</option>
+                <option value="default">default</option>
+                <option value="normal">normal</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+          </div>
+          <label>Canal <span class="muted small">(opcional · p. ej. panic)</span>
+            <input id="channelId" placeholder="default" />
+          </label>
           <label>Mensaje
             <textarea id="message" required placeholder="Escribe el cuerpo de la notificación..."></textarea>
           </label>
@@ -156,6 +188,24 @@ export function dashboardPage(user: string): string {
         var url = document.getElementById('url').value.trim();
         if (title) payload.title = title;
         if (url) payload.url = url;
+
+        var data = {};
+        var type = document.getElementById('type').value.trim();
+        var screen = document.getElementById('screen').value.trim();
+        var visitId = document.getElementById('visitId').value.trim();
+        var propertyId = document.getElementById('propertyId').value.trim();
+        var residenceId = document.getElementById('residenceId').value.trim();
+        if (type) data.type = type;
+        if (screen) data.screen = screen;
+        if (visitId) data.visitId = visitId;
+        if (propertyId) data.propertyId = Number(propertyId);
+        if (residenceId) data.residenceId = Number(residenceId);
+        if (Object.keys(data).length) payload.data = data;
+
+        var priority = document.getElementById('priority').value;
+        var channelId = document.getElementById('channelId').value.trim();
+        if (priority) payload.priority = priority;
+        if (channelId) payload.channelId = channelId;
 
         show('ok', 'Enviando...');
         fetch('/v1/notify', {
