@@ -1,3 +1,4 @@
+import { apiKeysScript, apiKeysSection } from './api-keys';
 import { baseCss, escapeHtml, themeInitScript, themeToggleScript } from './layout';
 
 export function dashboardPage(user: string): string {
@@ -40,6 +41,20 @@ export function dashboardPage(user: string): string {
     .device:active { transform: translateY(1px); }
     .device-id { font-weight: 600; font-size: 0.9rem; word-break: break-all; }
     .empty { padding: 1rem; text-align: center; }
+    .key-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+    .key-actions button.ghost { width: auto; font-size: 0.78rem; padding: 0.35rem 0.7rem; }
+    .key-actions button.danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+    .new-key {
+      display: inline-block;
+      margin: 0 0.5rem;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.82rem;
+      word-break: break-all;
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+    .mt { margin-top: 1.25rem; }
   </style>
 </head>
 <body>
@@ -119,6 +134,10 @@ export function dashboardPage(user: string): string {
           <p class="muted small empty">Cargando...</p>
         </div>
       </section>
+    </div>
+
+    <div class="mt">
+${apiKeysSection()}
     </div>
   </div>
 
@@ -208,7 +227,7 @@ export function dashboardPage(user: string): string {
         if (channelId) payload.channelId = channelId;
 
         show('ok', 'Enviando...');
-        fetch('/v1/notify', {
+        fetch('/api/notify', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(payload)
@@ -232,6 +251,7 @@ export function dashboardPage(user: string): string {
       loadDevices();
     })();
   </script>
+  ${apiKeysScript()}
   ${themeToggleScript()}
 </body>
 </html>`;

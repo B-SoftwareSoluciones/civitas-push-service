@@ -1,3 +1,6 @@
+# No requiere .env: si no defines SESSION_SECRET/API_KEY_PEPPER, el servidor los
+# genera automáticamente y los persiste en ./data/runtime.env (volumen), de modo
+# que las API keys y las sesiones sobreviven a los reinicios.
 services:
   civitas-access:
     build: .

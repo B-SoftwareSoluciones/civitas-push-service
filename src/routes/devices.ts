@@ -55,6 +55,7 @@ const listRoute = createRoute({
   tags: ['Devices'],
   summary: 'Listar dispositivos',
   description: 'Devuelve todos los dispositivos registrados ordenados por última conexión.',
+  security: [{ ApiKeyAuth: [] }],
   responses: {
     200: {
       ...jsonContent(
@@ -66,6 +67,10 @@ const listRoute = createRoute({
       ),
       description: 'Listado de dispositivos',
     },
+    401: {
+      ...jsonContent(errorResponseSchema),
+      description: 'API key ausente, inválida o deshabilitada',
+    },
   },
 });
 
@@ -74,6 +79,7 @@ const upsertRoute = createRoute({
   path: '/',
   tags: ['Devices'],
   summary: 'Registrar o actualizar un dispositivo',
+  security: [{ ApiKeyAuth: [] }],
   request: {
     body: {
       ...jsonContent(deviceSchema),
@@ -89,6 +95,10 @@ const upsertRoute = createRoute({
       ...jsonContent(errorResponseSchema),
       description: 'Cuerpo de la petición inválido',
     },
+    401: {
+      ...jsonContent(errorResponseSchema),
+      description: 'API key ausente, inválida o deshabilitada',
+    },
   },
 });
 
@@ -97,6 +107,7 @@ const syncRoute = createRoute({
   path: '/sync',
   tags: ['Devices'],
   summary: 'Sincronizar dispositivo',
+  security: [{ ApiKeyAuth: [] }],
   request: {
     body: {
       ...jsonContent(syncSchema),
@@ -112,6 +123,10 @@ const syncRoute = createRoute({
       ...jsonContent(errorResponseSchema),
       description: 'Cuerpo de la petición inválido',
     },
+    401: {
+      ...jsonContent(errorResponseSchema),
+      description: 'API key ausente, inválida o deshabilitada',
+    },
   },
 });
 
@@ -120,6 +135,7 @@ const deleteRoute = createRoute({
   path: '/{id}',
   tags: ['Devices'],
   summary: 'Eliminar dispositivo',
+  security: [{ ApiKeyAuth: [] }],
   request: {
     params: z.object({
       id: z.string().openapi({ example: 'device-123' }),
@@ -129,6 +145,10 @@ const deleteRoute = createRoute({
     200: {
       ...jsonContent(okResponseSchema),
       description: 'Dispositivo eliminado',
+    },
+    401: {
+      ...jsonContent(errorResponseSchema),
+      description: 'API key ausente, inválida o deshabilitada',
     },
   },
 });

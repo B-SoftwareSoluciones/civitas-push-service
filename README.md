@@ -6,8 +6,12 @@ Servidor mínimo de notificaciones push vía [Expo](https://expo.dev) con un pan
 
 - Guarda/actualiza dispositivos (`deviceId` + `token`) de forma automática.
 - Ruta `POST /v1/notify` que recibe **token de Expo, device id y mensaje** y envía el push.
-- Panel web con login (usuario + contraseña) para enviar notificaciones desde el navegador.
+- **API keys** para servicios externos: se crean, se revocan y se eliminan desde el panel o la CLI. No caducan.
+- Todas las rutas `/v1/*` exigen API key (`Authorization: Bearer` o `X-API-Key`).
+- API keys con **allowlist de IPs/CIDR** opcional.
+- Panel web con login (usuario + contraseña) para enviar notificaciones y gestionar API keys.
 - Persistencia en SQLite con `node:sqlite` (sin dependencias nativas).
+- Cabeceras de seguridad (CSP, `X-Frame-Options`, `HSTS` en producción, etc.).
 - Sin cron, sin scraping: solo push.
 
 ## Requisitos
@@ -31,7 +35,13 @@ Edita `.env` con tus credenciales:
 | `ADMIN_USER` | Usuario del panel web. | `admin` |
 | `ADMIN_PASSWORD` | Contraseña del panel web. | `una-clave-fuerte` |
 | `SESSION_SECRET` | Secreto para firmar la cookie de sesión. | cadena aleatoria larga |
+| `API_KEY_PEPPER` | Secreto con el que se calcula el hash de las API keys. **Cambiarlo invalida todas las claves.** | cadena aleatoria larga |
+| `TRUST_PROXY` | Confiar en `X-Forwarded-For`/`X-Real-IP` para resolver la IP del cliente (true tras un reverse proxy). | `false` |
 | `CORS_ORIGIN` | Origen permitido para la API (`*` en desarrollo). | `*` |
+
+> Si no defines `SESSION_SECRET` ni `API_KEY_PEPPER`, el servidor los genera y los
+> guarda en `data/runtime.env` (dentro del volumen de datos) y los reutiliza en los
+> siguientes arranques. Así las API keys y las sesiones **no se invalidan al reiniciar**.
 
 ## Uso
 
@@ -47,7 +57,17 @@ Al arrancar, la base de datos se crea automáticamente en la ruta `DATABASE_PATH
 
 ## API
 
+Todas las rutas `/v1/*` requieren una **API key**. Envíala en la cabecera
+`X-API-Key: <clave>` o `Authorization: Bearer <clave>`. Sin clave válida la API
+responde `401 { "ok": false, "error": "unauthorized" }`.
+
+```bash
+export CIVITAS_API_KEY="cva_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
 ### `GET /health`
+
+Público (sin API key).
 
 ```bash
 curl http://localhost:8790/health
@@ -60,6 +80,7 @@ Registra o actualiza un dispositivo. Se puede llamar tantas veces como haga falt
 
 ```bash
 curl -X POST http://localhost:8790/v1/devices \
+  -H "X-API-Key: $CIVITAS_API_KEY" \
   -H 'content-type: application/json' \
   -d '{
     "deviceId": "device-123",
@@ -75,6 +96,7 @@ curl -X POST http://localhost:8790/v1/devices \
 
 ```bash
 curl -X POST http://localhost:8790/v1/notify \
+  -H "X-API-Key: $CIVITAS_API_KEY" \
   -H 'content-type: application/json' \
   -d '{
     "deviceId": "device-123",
@@ -99,6 +121,7 @@ Ruta de compatibilidad con la app Civitas Access (solo registra el dispositivo; 
 
 ```bash
 curl -X POST http://localhost:8790/v1/devices/sync \
+  -H "X-API-Key: $CIVITAS_API_KEY" \
   -H 'content-type: application/json' \
   -d '{
     "deviceId": "device-123",
@@ -114,7 +137,46 @@ curl -X POST http://localhost:8790/v1/devices/sync \
 Elimina un dispositivo.
 
 ```bash
-curl -X DELETE http://localhost:8790/v1/devices/device-123
+curl -X DELETE http://localhost:8790/v1/devices/device-123 \
+  -H "X-API-Key: $CIVITAS_API_KEY"
+```
+
+## API keys
+
+Las API keys son la credencial de los servicios externos. **No caducan**; se
+revocan (deshabilitan) o se eliminan cuando ya no se usan. El servidor solo guarda
+un **hash** (HMAC-SHA256) de cada clave: la clave en claro se muestra **una única
+vez**, al crearla.
+
+### Gestión desde el panel
+
+Con la sesión iniciada, en la sección **API Keys** del panel puedes:
+
+- Crear una clave con un nombre y, opcionalmente, una lista de **IPs permitidas**
+  (valores exactos o CIDR separados por comas, p. ej. `10.0.0.0/8, 1.2.3.4`).
+- Copiar la clave (solo se muestra al crearla).
+- Revocar/activar o eliminar la clave.
+
+### Endpoints del panel (requieren sesión)
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `GET` | `/api/keys` | Lista las claves (nunca devuelve la clave en claro). |
+| `POST` | `/api/keys` | Crea una clave; devuelve `{ key }` una sola vez. |
+| `PATCH` | `/api/keys/:id` | Cambia `enabled` y/o `allowedIps`. |
+| `DELETE` | `/api/keys/:id` | Elimina la clave. |
+
+### CLI
+
+```bash
+# Crear (imprime la clave una vez)
+npm run api-key:create -- --name "App móvil" --ips "10.0.0.0/8, 1.2.3.4"
+
+# Listar
+npm run api-key:list
+
+# Eliminar por id
+npm run api-key:revoke -- <id>
 ```
 
 ## Panel web
@@ -125,12 +187,15 @@ curl -X DELETE http://localhost:8790/v1/devices/device-123
    - Escribir **Device ID**, **Expo Token**, **Título** (opcional), **URL** (opcional) y **Mensaje**.
    - Ver la lista de **dispositivos registrados**; al hacer clic en uno se autocompletan sus datos.
    - Enviar la notificación con el botón **Enviar notificación**.
+   - Gestionar las **API keys** (crear, copiar una vez, revocar, eliminar).
 
-La sesión se guarda en una cookie HttpOnly firmada con `SESSION_SECRET` (duración 7 días).
+La sesión se guarda en una cookie HttpOnly firmada con `SESSION_SECRET` (duración 7 días; `Secure` en producción).
 
 ## Persistencia
 
-Los datos viven en `DATABASE_PATH` (por defecto `./data/push.sqlite`). Tabla `devices`:
+Los datos viven en `DATABASE_PATH` (por defecto `./data/push.sqlite`).
+
+Tabla `devices`:
 
 | Columna | Tipo | Descripción |
 | --- | --- | --- |
@@ -142,6 +207,21 @@ Los datos viven en `DATABASE_PATH` (por defecto `./data/push.sqlite`). Tabla `de
 | `updated_at` | TEXT | Última actualización (ISO). |
 | `last_seen_at` | TEXT | Último contacto (ISO). |
 
+Tabla `api_keys`:
+
+| Columna | Tipo | Descripción |
+| --- | --- | --- |
+| `id` | TEXT PK | Identificador de la clave. |
+| `name` | TEXT | Nombre descriptivo. |
+| `prefix` | TEXT | Prefijo visible (p. ej. `cva_ab12cd34`). |
+| `key_hash` | TEXT UNIQUE | HMAC-SHA256 de la clave completa. |
+| `enabled` | INTEGER | `1` activa, `0` revocada. |
+| `allowed_ips` | TEXT | IPs/CIDR permitidos (vacío = cualquiera). |
+| `created_at` | TEXT | Alta (ISO). |
+| `last_used_at` | TEXT / NULL | último uso (ISO). |
+
+Los secretos generados automáticamente se guardan en `data/runtime.env` (mismo volumen).
+
 ## Docker
 
 ```bash
@@ -149,9 +229,21 @@ docker compose up --build
 ```
 
 El servicio escucha en `:8790` y persiste la base de datos en `./data` (montado como volumen).
+**No necesitas crear `.env`**: si no defines `SESSION_SECRET`/`API_KEY_PEPPER`, se generan y
+persisten en `./data/runtime.env`; las API keys y las sesiones sobreviven a los reinicios.
+Si usas el `docker-compose.yml` incluido, `.env` es opcional (`required: false`).
 
 ## Seguridad
 
-- Cambia `ADMIN_PASSWORD` y `SESSION_SECRET` antes de exponer el servicio.
-- Configura `EXPO_ACCESS_TOKEN` si usas Enhanced Push Security.
-- La API `/v1/*` es pública por diseño (la usan las apps). Protégela con un reverse proxy o firewall si la expones a internet.
+- **API keys obligatorias en `/v1/*`**: sin clave válida no hay acceso a la API externa.
+  Las claves se guardan hasheadas (HMAC-SHA256) y se verifican en tiempo constante.
+- **Sin caducidad**: las claves no expiran; revócalas o elimínalas cuando dejen de usarse.
+- **Allowlist de IPs/CIDR** por clave (opcional) para restringir su origen.
+- **Cabeceras de seguridad**: CSP, `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy` y `HSTS` en producción.
+- **Superficies separadas**: `/v1/*` solo con API key; el panel (`/`, `/api/*`, `/doc`, `/ui`)
+  solo con sesión.
+- Si expones el servicio detrás de un reverse proxy, activa `TRUST_PROXY=true` para que la
+  IP del cliente se lea de `X-Forwarded-For`/`X-Real-IP` (necesario para la allowlist).
+- Cambia `ADMIN_PASSWORD` antes de exponer el servicio y configura `EXPO_ACCESS_TOKEN` si usas
+  Enhanced Push Security.

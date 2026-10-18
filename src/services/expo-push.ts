@@ -22,6 +22,7 @@ export interface PushRecipient {
 export interface PushResult {
   sent: number;
   invalidTokens: string[];
+  error?: string;
 }
 
 export async function sendPush(
@@ -47,9 +48,20 @@ export async function sendPush(
 
   let sent = 0;
   const chunks = expo.chunkPushNotifications(messages);
-  for (const chunk of chunks) {
-    const tickets = await expo.sendPushNotificationsAsync(chunk);
-    sent += tickets.filter((ticket) => ticket.status === 'ok').length;
+  try {
+    for (const chunk of chunks) {
+      const tickets = await expo.sendPushNotificationsAsync(chunk);
+      sent += tickets.filter((ticket) => ticket.status === 'ok').length;
+    }
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[expo-push] fallo al enviar push:', code ?? message);
+    return {
+      sent,
+      invalidTokens,
+      error: code === 'AUTHENTICATION_ERROR' ? 'invalid_expo_access_token' : 'push_upstream_error',
+    };
   }
 
   return { sent, invalidTokens };

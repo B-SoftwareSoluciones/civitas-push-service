@@ -1,0 +1,18 @@
+services:
+  civitas-access:
+    image: jom3l/civitas-access:latest
+    ports:
+      - '8790:8790'
+    environment:
+      PORT: '8790'
+      DATABASE_PATH: /app/data/push.sqlite
+      EXPO_ACCESS_TOKEN: ''
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin123
+      SESSION_SECRET: lq9Yqk4cW3n8vJm0pR2sT6uB1xH5zA7dG9kM2nP4rS8tV0wX
+      API_KEY_PEPPER: cambia-este-pepper
+      TRUST_PROXY: 'false'
+      CORS_ORIGIN: '*'
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

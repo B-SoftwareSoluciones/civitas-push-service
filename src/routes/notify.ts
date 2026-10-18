@@ -14,7 +14,7 @@ const notifyDataSchema = z
   .passthrough()
   .openapi('NotifyData');
 
-const notifySchema = z
+export const notifySchema = z
   .object({
     deviceId: z.string().min(1).max(128).openapi({ example: 'device-123' }),
     token: z
@@ -39,6 +39,38 @@ const notifySchema = z
     channelId: z.string().max(64).optional().openapi({ example: 'panic' }),
   })
   .openapi('NotifyRequest');
+
+export type NotifyInput = z.infer<typeof notifySchema>;
+
+export type NotifyOutcome =
+  | { ok: true; sent: number }
+  | { ok: false; error: string; sent: number };
+
+export async function runNotify(input: NotifyInput): Promise<NotifyOutcome> {
+  const { deviceId, token, message, title, url, data, priority, channelId } = input;
+
+  upsertDevice({ id: deviceId, token });
+
+  const pushData: Record<string, unknown> = { ...(data ?? {}) };
+  if (!pushData.screen) pushData.screen = 'Home';
+  if (url) pushData.url = url;
+
+  const result = await sendPush([{ deviceId, token }], {
+    title: title ?? 'Notificación',
+    body: message,
+    data: pushData,
+    priority,
+    channelId,
+  });
+
+  if (result.error) return { ok: false, error: result.error, sent: result.sent };
+  if (result.invalidTokens.length > 0) {
+    return { ok: false, error: 'invalid_expo_token', sent: result.sent };
+  }
+  if (result.sent === 0) return { ok: false, error: 'push_failed', sent: 0 };
+
+  return { ok: true, sent: result.sent };
+}
 
 const notifySuccessSchema = z
   .object({
@@ -70,7 +102,9 @@ const notifyRoute = createRoute({
   path: '/',
   tags: ['Notify'],
   summary: 'Enviar notificación push',
-  description: 'Registra el dispositivo y envía una notificación push a través de Expo.',
+  description:
+    'Registra el dispositivo y envía una notificación push a través de Expo. Requiere API key (`Authorization: Bearer <key>` o `X-API-Key`).',
+  security: [{ ApiKeyAuth: [] }],
   request: {
     body: {
       ...jsonContent(notifySchema),
@@ -85,6 +119,10 @@ const notifyRoute = createRoute({
     400: {
       ...jsonContent(notifyErrorSchema),
       description: 'Cuerpo inválido o token de Expo inválido',
+    },
+    401: {
+      ...jsonContent(notifyErrorSchema),
+      description: 'API key ausente, inválida o deshabilitada',
     },
     502: {
       ...jsonContent(notifyErrorSchema),
@@ -105,29 +143,15 @@ export const notifyRoutes = new OpenAPIHono({
 });
 
 notifyRoutes.openapi(notifyRoute, async (c) => {
-  const { deviceId, token, message, title, url, data, priority, channelId } = c.req.valid('json');
+  const outcome = await runNotify(c.req.valid('json'));
 
-  upsertDevice({ id: deviceId, token });
-
-  const pushData: Record<string, unknown> = { ...(data ?? {}) };
-  if (!pushData.screen) pushData.screen = 'Home';
-  if (url) pushData.url = url;
-
-  const result = await sendPush([{ deviceId, token }], {
-    title: title ?? 'Notificación',
-    body: message,
-    data: pushData,
-    priority,
-    channelId,
-  });
-
-  if (result.invalidTokens.length > 0) {
-    return c.json({ ok: false as const, error: 'invalid_expo_token', sent: result.sent }, 400);
+  if (outcome.ok) {
+    return c.json({ ok: true as const, sent: outcome.sent }, 200);
   }
 
-  if (result.sent === 0) {
-    return c.json({ ok: false as const, error: 'push_failed', sent: 0 }, 502);
+  if (outcome.error === 'invalid_expo_token') {
+    return c.json({ ok: false as const, error: outcome.error, sent: outcome.sent }, 400);
   }
 
-  return c.json({ ok: true as const, sent: result.sent }, 200);
+  return c.json({ ok: false as const, error: outcome.error, sent: outcome.sent }, 502);
 });
