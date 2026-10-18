@@ -1,26 +1,29 @@
-export function apiKeysSection(): string {
-  return `
-      <section class="card panel">
-        <h2>API Keys</h2>
-        <p class="muted small" style="margin-bottom: 1rem;">
-          Usa estas claves en el header <code>Authorization: Bearer &lt;key&gt;</code> o
-          <code>X-API-Key</code> para consumir <code>/v1/*</code>. No caducan; revócalas o elimínalas
-          cuando ya no las necesites.
-        </p>
-        <form id="key-form">
-          <label>Nombre <span class="muted small">(obligatorio)</span>
-            <input id="key-name" required placeholder="App móvil" />
-          </label>
-          <label>IPs permitidas <span class="muted small">(opcional · vacío = cualquiera)</span>
-            <input id="key-ips" placeholder="1.2.3.4, 10.0.0.0/8" />
-          </label>
-          <button type="submit">Crear API key</button>
-          <div id="key-result" class="toast"></div>
-        </form>
-        <div id="keys" class="devices" style="margin-top: 1rem;">
-          <p class="muted small empty">Cargando...</p>
-        </div>
-      </section>`;
+export function apiKeysPanel(): string {
+  return `        <section class="tab-panel" id="panel-keys" role="tabpanel" aria-label="API Keys" hidden>
+          <div class="card panel">
+            <h2>API Keys</h2>
+            <p class="muted small" style="margin-bottom: 1rem;">
+              Usa estas claves en el header <code>Authorization: Bearer &lt;key&gt;</code> o
+              <code>X-API-Key</code> para consumir <code>/v1/*</code>. No caducan; revócalas o elimínalas
+              cuando ya no las necesites.
+            </p>
+            <form id="key-form">
+              <div class="row">
+                <label>Nombre <span class="muted small">(obligatorio)</span>
+                  <input id="key-name" required placeholder="App móvil" />
+                </label>
+                <label>IPs permitidas <span class="muted small">(opcional · vacío = cualquiera)</span>
+                  <input id="key-ips" placeholder="1.2.3.4, 10.0.0.0/8" />
+                </label>
+              </div>
+              <button type="submit">Crear API key</button>
+              <div id="key-result" class="toast"></div>
+            </form>
+            <div id="keys" class="devices" style="margin-top: 1.2rem;">
+              <p class="muted small empty">Cargando...</p>
+            </div>
+          </div>
+        </section>`;
 }
 
 export function apiKeysScript(): string {
@@ -87,7 +90,11 @@ export function apiKeysScript(): string {
             if (res.status === 401) { window.location.href = '/login'; return null; }
             return res.json();
           })
-          .then(function (data) { if (data) renderKeys(data.keys); })
+          .then(function (data) {
+            if (!data) return;
+            renderKeys(data.keys);
+            if (window.__setBadge) window.__setBadge('badge-keys', data.count || (data.keys || []).length);
+          })
           .catch(function () {
             keysEl.innerHTML = '';
             keysEl.appendChild(el('p', 'muted small empty', 'No se pudieron cargar las API keys.'));

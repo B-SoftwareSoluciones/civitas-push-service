@@ -1,151 +1,111 @@
-import { apiKeysScript, apiKeysSection } from './api-keys';
-import { baseCss, escapeHtml, themeInitScript, themeToggleScript } from './layout';
+import { apiKeysPanel, apiKeysScript } from './api-keys';
+import {
+  appShell,
+  baseCss,
+  shellCss,
+  shellScript,
+  themeInitScript,
+  themeToggleScript,
+} from './layout';
 
-export function dashboardPage(user: string): string {
-  return `<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel · Civitas Access</title>
-  <link rel="icon" href="/assets/icon.png" />
-  ${themeInitScript()}
-  <style>
-    ${baseCss}
-    body { padding: 1.5rem; }
-    .wrap { max-width: 1080px; margin: 0 auto; }
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .who { display: flex; align-items: center; gap: 0.8rem; font-size: 0.85rem; color: var(--muted); }
-    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 1.25rem; }
-    @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
-    .panel { padding: 1.5rem; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
-    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
-    .panel h2 { font-size: 1rem; margin: 0 0 1rem; }
-    .devices { display: flex; flex-direction: column; gap: 0.6rem; max-height: 460px; overflow: auto; }
-    .device {
-      padding: 0.75rem 0.9rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: color-mix(in srgb, var(--primary) 4%, transparent);
-      cursor: pointer;
-      transition: border-color 0.15s, transform 0.08s;
-    }
-    .device:hover { border-color: var(--primary); }
-    .device:active { transform: translateY(1px); }
-    .device-id { font-weight: 600; font-size: 0.9rem; word-break: break-all; }
-    .empty { padding: 1rem; text-align: center; }
-    .key-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
-    .key-actions button.ghost { width: auto; font-size: 0.78rem; padding: 0.35rem 0.7rem; }
-    .key-actions button.danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
-    .new-key {
-      display: inline-block;
-      margin: 0 0.5rem;
-      padding: 0.15rem 0.4rem;
-      font-size: 0.82rem;
-      word-break: break-all;
-      background: color-mix(in srgb, var(--primary) 10%, transparent);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-    }
-    .mt { margin-top: 1.25rem; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <div class="brand"><img class="logo" src="/assets/icon.png" alt="Civitas Access" /> Civitas Access</div>
-      <div class="who">
-        <span>${escapeHtml(user)}</span>
-        <button type="button" id="theme-toggle" class="theme-toggle">Modo oscuro</button>
-        <form method="post" action="/logout">
-          <button class="ghost" type="submit">Salir</button>
-        </form>
-      </div>
-    </header>
+function notifyPanel(): string {
+  return `        <section class="tab-panel" id="panel-notify" role="tabpanel" aria-label="Notificación">
+          <div class="card panel">
+            <h2>Enviar notificación</h2>
+            <form id="notify-form">
+              <fieldset class="fieldset">
+                <legend>Destino</legend>
+                <label>Device ID
+                  <input id="deviceId" required placeholder="device-123" />
+                </label>
+                <label>Expo Token
+                  <input id="token" required placeholder="ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" />
+                </label>
+              </fieldset>
 
-    <div class="grid">
-      <section class="card panel">
-        <h2>Enviar notificación</h2>
-        <form id="notify-form">
-          <label>Device ID
-            <input id="deviceId" required placeholder="device-123" />
-          </label>
-          <label>Expo Token
-            <input id="token" required placeholder="ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" />
-          </label>
-          <div class="row">
-            <label>Título <span class="muted small">(opcional)</span>
-              <input id="title" placeholder="Notificación" />
-            </label>
-            <label>URL <span class="muted small">(opcional · si se omite abre Home)</span>
-              <input id="url" placeholder="/visitas/..." />
-            </label>
+              <fieldset class="fieldset">
+                <legend>Contenido</legend>
+                <div class="row">
+                  <label>Título <span class="muted small">(opcional)</span>
+                    <input id="title" placeholder="Notificación" />
+                  </label>
+                  <label>URL <span class="muted small">(opcional · si se omite abre Home)</span>
+                    <input id="url" placeholder="/visitas/..." />
+                  </label>
+                </div>
+                <label>Mensaje
+                  <textarea id="message" required placeholder="Escribe el cuerpo de la notificación..."></textarea>
+                </label>
+              </fieldset>
+
+              <fieldset class="fieldset">
+                <legend>Enrutamiento en la app</legend>
+                <div class="row">
+                  <label>Tipo <span class="muted small">(opcional)</span>
+                    <input id="type" placeholder="visit_registered" />
+                  </label>
+                  <label>Pantalla <span class="muted small">(opcional · Home por defecto)</span>
+                    <input id="screen" placeholder="Home" />
+                  </label>
+                </div>
+                <div class="row">
+                  <label>Visit ID <span class="muted small">(opcional)</span>
+                    <input id="visitId" placeholder="VIS-0001" />
+                  </label>
+                  <label>Property ID <span class="muted small">(opcional)</span>
+                    <input id="propertyId" type="number" placeholder="456" />
+                  </label>
+                </div>
+                <div class="row">
+                  <label>Residence ID <span class="muted small">(opcional)</span>
+                    <input id="residenceId" type="number" placeholder="2" />
+                  </label>
+                  <label>Prioridad <span class="muted small">(opcional)</span>
+                    <select id="priority">
+                      <option value="">Por defecto</option>
+                      <option value="default">default</option>
+                      <option value="normal">normal</option>
+                      <option value="high">high</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Canal <span class="muted small">(opcional · p. ej. panic)</span>
+                  <input id="channelId" placeholder="default" />
+                </label>
+              </fieldset>
+
+              <button type="submit">Enviar notificación</button>
+              <div id="result" class="toast"></div>
+            </form>
           </div>
-          <div class="row">
-            <label>Tipo <span class="muted small">(opcional)</span>
-              <input id="type" placeholder="visit_registered" />
-            </label>
-            <label>Pantalla <span class="muted small">(opcional · Home por defecto)</span>
-              <input id="screen" placeholder="Home" />
-            </label>
-          </div>
-          <div class="row">
-            <label>Visit ID <span class="muted small">(opcional)</span>
-              <input id="visitId" placeholder="VIS-0001" />
-            </label>
-            <label>Property ID <span class="muted small">(opcional)</span>
-              <input id="propertyId" type="number" placeholder="456" />
-            </label>
-          </div>
-          <div class="row">
-            <label>Residence ID <span class="muted small">(opcional)</span>
-              <input id="residenceId" type="number" placeholder="2" />
-            </label>
-            <label>Prioridad <span class="muted small">(opcional)</span>
-              <select id="priority">
-                <option value="">Por defecto</option>
-                <option value="default">default</option>
-                <option value="normal">normal</option>
-                <option value="high">high</option>
-              </select>
-            </label>
-          </div>
-          <label>Canal <span class="muted small">(opcional · p. ej. panic)</span>
-            <input id="channelId" placeholder="default" />
-          </label>
-          <label>Mensaje
-            <textarea id="message" required placeholder="Escribe el cuerpo de la notificación..."></textarea>
-          </label>
-          <button type="submit">Enviar notificación</button>
-          <div id="result" class="toast"></div>
-        </form>
-      </section>
+        </section>`;
+}
 
-      <section class="card panel">
-        <h2>Dispositivos registrados</h2>
-        <div id="devices" class="devices">
-          <p class="muted small empty">Cargando...</p>
-        </div>
-      </section>
-    </div>
+function devicesPanel(): string {
+  return `        <section class="tab-panel" id="panel-devices" role="tabpanel" aria-label="Dispositivos" hidden>
+          <div class="card panel">
+            <h2>Dispositivos registrados</h2>
+            <div class="toolbar">
+              <input id="device-search" type="search" placeholder="Buscar por Device ID..." />
+              <button type="button" class="ghost" id="devices-refresh" style="width:auto; white-space:nowrap;">Actualizar</button>
+            </div>
+            <p class="muted small" style="margin-bottom:0.9rem;">Haz clic en un dispositivo para autocompletar el formulario de notificación.</p>
+            <div id="devices" class="devices">
+              <p class="muted small empty">Cargando...</p>
+            </div>
+          </div>
+        </section>`;
+}
 
-    <div class="mt">
-${apiKeysSection()}
-    </div>
-  </div>
-
-  <script>
+function dashboardScript(): string {
+  return `<script>
     (function () {
       var form = document.getElementById('notify-form');
       var result = document.getElementById('result');
       var devicesEl = document.getElementById('devices');
+      var searchEl = document.getElementById('device-search');
+      var refreshEl = document.getElementById('devices-refresh');
+      var allDevices = [];
 
       function show(kind, text) {
         result.className = 'toast show ' + kind;
@@ -162,16 +122,22 @@ ${apiKeysSection()}
       function fill(device) {
         document.getElementById('deviceId').value = device.deviceId;
         document.getElementById('token').value = device.token || '';
+        window.location.hash = '#/notify';
         document.getElementById('message').focus();
       }
 
-      function renderDevices(devices) {
+      function renderDevices() {
+        var query = (searchEl && searchEl.value || '').trim().toLowerCase();
+        var list = query
+          ? allDevices.filter(function (d) { return (d.deviceId || '').toLowerCase().indexOf(query) !== -1; })
+          : allDevices;
         devicesEl.innerHTML = '';
-        if (!devices || devices.length === 0) {
-          devicesEl.appendChild(el('p', 'muted small empty', 'Aún no hay dispositivos registrados.'));
+        if (!list || list.length === 0) {
+          devicesEl.appendChild(el('p', 'muted small empty',
+            allDevices.length === 0 ? 'Aún no hay dispositivos registrados.' : 'Sin resultados para la búsqueda.'));
           return;
         }
-        devices.forEach(function (device) {
+        list.forEach(function (device) {
           var row = el('div', 'device');
           row.appendChild(el('div', 'device-id', device.deviceId));
           var when = device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '';
@@ -188,13 +154,19 @@ ${apiKeysSection()}
             return res.json();
           })
           .then(function (data) {
-            if (data) renderDevices(data.devices);
+            if (!data) return;
+            allDevices = data.devices || [];
+            renderDevices();
+            if (window.__setBadge) window.__setBadge('badge-devices', allDevices.length);
           })
           .catch(function () {
             devicesEl.innerHTML = '';
             devicesEl.appendChild(el('p', 'muted small empty', 'No se pudieron cargar los dispositivos.'));
           });
       }
+
+      if (searchEl) searchEl.addEventListener('input', renderDevices);
+      if (refreshEl) refreshEl.addEventListener('click', loadDevices);
 
       form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -250,8 +222,31 @@ ${apiKeysSection()}
 
       loadDevices();
     })();
-  </script>
+  </script>`;
+}
+
+export function dashboardPage(user: string): string {
+  return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel · Civitas Access</title>
+  <link rel="icon" href="/assets/icon.png" />
+  ${themeInitScript()}
+  <style>
+    ${baseCss}
+    ${shellCss}
+  </style>
+</head>
+<body>
+  ${appShell({
+    user,
+    content: [notifyPanel(), devicesPanel(), apiKeysPanel()].join('\n'),
+  })}
+  ${dashboardScript()}
   ${apiKeysScript()}
+  ${shellScript()}
   ${themeToggleScript()}
 </body>
 </html>`;

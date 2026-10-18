@@ -2,13 +2,16 @@ import type { Context, Next } from 'hono';
 
 import { config } from '../config';
 
+const CDN_SOURCES = 'https://cdn.jsdelivr.net https://unpkg.com';
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://unpkg.com",
-  "style-src 'self' 'unsafe-inline' https://unpkg.com",
+  `script-src 'self' 'unsafe-inline' blob: ${CDN_SOURCES}`,
+  `style-src 'self' 'unsafe-inline' ${CDN_SOURCES}`,
   "img-src 'self' data:",
   "connect-src 'self'",
-  "font-src 'self' data: https://unpkg.com",
+  `font-src 'self' data: ${CDN_SOURCES}`,
+  "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",

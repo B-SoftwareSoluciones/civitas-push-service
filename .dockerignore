@@ -1,0 +1,14 @@
+.git
+.gitignore
+node_modules
+data
+.env
+.env.*
+!.env.example
+*.log
+compose.yml
+docker-compose.yml
+Dockerfile
+.dockerignore
+postman_collection.json
+README.md
