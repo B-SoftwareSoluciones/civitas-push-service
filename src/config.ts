@@ -88,7 +88,37 @@ export const config = {
   adminPassword: process.env.ADMIN_PASSWORD ?? '',
   sessionSecret,
   apiKeyPepper,
-  corsOrigin: process.env.CORS_ORIGIN ?? '*',
+  corsOrigin: process.env.CORS_ORIGIN?.trim() ?? '',
   trustProxy: /^(1|true|yes)$/i.test(process.env.TRUST_PROXY ?? ''),
   isProduction: process.env.NODE_ENV === 'production',
+  loginRateLimitMax: Number(process.env.LOGIN_RATE_LIMIT_MAX ?? 10),
+  apiRateLimitMax: Number(process.env.API_RATE_LIMIT_MAX ?? 120),
 };
+
+const WEAK_PASSWORDS = new Set([
+  'admin',
+  'admin123',
+  'administrador',
+  'cambia-esto',
+  'password',
+  'changeme',
+  '123456',
+  'qwerty',
+]);
+
+export function assertSecureConfig(): void {
+  const password = config.adminPassword;
+  if (password.length < 12 || WEAK_PASSWORDS.has(password.toLowerCase())) {
+    console.error(
+      '[config] ADMIN_PASSWORD es obligatoria: define una contraseña de al menos 12 caracteres ' +
+        'que no sea un valor por defecto (en .env).',
+    );
+    process.exit(1);
+  }
+
+  if (config.isProduction && config.corsOrigin === '*') {
+    console.warn(
+      '[config] CORS_ORIGIN="*" en producción; restíngelo a los orígenes que consumen /v1/*.',
+    );
+  }
+}

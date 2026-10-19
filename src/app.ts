@@ -6,6 +6,8 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { config } from './config';
 import { requireApiKey } from './middleware/api-key';
 import { requestLogger } from './middleware/logger';
+import { rateLimit } from './middleware/rate-limit';
+import { requireSameOrigin } from './middleware/same-origin';
 import { securityHeaders } from './middleware/security-headers';
 import { requireApiAuth, requireWebAuth } from './middleware/session';
 import { devicesRoutes } from './routes/devices';
@@ -19,7 +21,10 @@ app.use('*', securityHeaders);
 
 app.use('/assets/*', serveStatic({ root: './' }));
 
-app.use('/v1/*', cors({ origin: config.corsOrigin }));
+app.use('/v1/*', rateLimit({ name: 'v1', windowMs: 60_000, max: config.apiRateLimitMax }));
+if (config.corsOrigin) {
+  app.use('/v1/*', cors({ origin: config.corsOrigin }));
+}
 app.use('/v1/*', requireApiKey);
 
 app.get('/health', (c) => c.json({ ok: true, time: new Date().toISOString() }));
@@ -27,6 +32,7 @@ app.get('/health', (c) => c.json({ ok: true, time: new Date().toISOString() }));
 app.route('/v1/devices', devicesRoutes);
 app.route('/v1/notify', notifyRoutes);
 
+app.use('/api/*', requireSameOrigin);
 app.use('/api/*', requireApiAuth);
 app.route('/', webRoutes);
 

@@ -1,9 +1,8 @@
 import type { Context, Next } from 'hono';
-import { getConnInfo } from '@hono/node-server/conninfo';
 
-import { config } from '../config';
 import { findApiKeyByHash, touchApiKey, type ApiKeyRow } from '../db/api-keys';
 import { hashApiKey, matchIpAllowlist, safeEqualHex } from '../services/api-keys';
+import { clientIp } from '../services/client-ip';
 
 const TOUCH_INTERVAL_MS = 60_000;
 const lastTouch = new Map<string, number>();
@@ -22,24 +21,6 @@ function extractKey(c: Context): string | undefined {
   }
   const apiKey = c.req.header('x-api-key');
   return apiKey?.trim() || undefined;
-}
-
-function clientIp(c: Context): string | undefined {
-  if (config.trustProxy) {
-    const forwarded = c.req.header('x-forwarded-for');
-    if (forwarded) {
-      const first = forwarded.split(',')[0]?.trim();
-      if (first) return first;
-    }
-    const realIp = c.req.header('x-real-ip')?.trim();
-    if (realIp) return realIp;
-  }
-
-  try {
-    return getConnInfo(c).remote.address;
-  } catch {
-    return undefined;
-  }
 }
 
 function markUsed(row: ApiKeyRow): void {

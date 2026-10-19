@@ -1,7 +1,9 @@
 import { serve } from '@hono/node-server';
 
 import { app } from './app';
-import { config } from './config';
+import { assertSecureConfig, config } from './config';
+
+assertSecureConfig();
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[Civitas Access] escuchando en http://localhost:${info.port}`);

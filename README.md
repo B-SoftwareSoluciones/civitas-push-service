@@ -33,11 +33,13 @@ Edita `.env` con tus credenciales:
 | `DATABASE_PATH` | Ruta del archivo SQLite (relativa al proyecto). | `./data/push.sqlite` |
 | `EXPO_ACCESS_TOKEN` | Token de acceso de Expo (Enhanced Push Security). Opcional en desarrollo. | |
 | `ADMIN_USER` | Usuario del panel web. | `admin` |
-| `ADMIN_PASSWORD` | Contraseña del panel web. | `una-clave-fuerte` |
+| `ADMIN_PASSWORD` | Contraseña del panel web. **Obligatoria**: mínimo 12 caracteres y no puede ser un valor por defecto (si no, el servidor no arranca). | `una-clave-fuerte` |
 | `SESSION_SECRET` | Secreto para firmar la cookie de sesión. | cadena aleatoria larga |
 | `API_KEY_PEPPER` | Secreto con el que se calcula el hash de las API keys. **Cambiarlo invalida todas las claves.** | cadena aleatoria larga |
 | `TRUST_PROXY` | Confiar en `X-Forwarded-For`/`X-Real-IP` para resolver la IP del cliente (true tras un reverse proxy). | `false` |
-| `CORS_ORIGIN` | Origen permitido para la API (`*` en desarrollo). | `*` |
+| `CORS_ORIGIN` | Origen permitido para la API. Vacío = no se emiten cabeceras CORS (recomendado para móvil). | `https://panel.example.com` |
+| `LOGIN_RATE_LIMIT_MAX` | Intentos de login por IP en 5 minutos. | `10` |
+| `API_RATE_LIMIT_MAX` | Peticiones por IP a `/v1/*` por minuto. | `120` |
 
 > Si no defines `SESSION_SECRET` ni `API_KEY_PEPPER`, el servidor los genera y los
 > guarda en `data/runtime.env` (dentro del volumen de datos) y los reutiliza en los
@@ -229,9 +231,11 @@ docker compose up --build
 ```
 
 El servicio escucha en `:8790` y persiste la base de datos en `./data` (montado como volumen).
-**No necesitas crear `.env`**: si no defines `SESSION_SECRET`/`API_KEY_PEPPER`, se generan y
-persisten en `./data/runtime.env`; las API keys y las sesiones sobreviven a los reinicios.
-Si usas el `docker-compose.yml` incluido, `.env` es opcional (`required: false`).
+**Necesitas un `.env` con `ADMIN_PASSWORD`** (mínimo 12 caracteres): los secretos ya **no** van en
+`compose.yml`. Si no defines `SESSION_SECRET`/`API_KEY_PEPPER`, se generan y persisten en
+`./data/runtime.env`; las API keys y las sesiones sobreviven a los reinicios.
+El contenedor corre como usuario sin privilegios; ajusta `CIVITAS_UID`/`CIVITAS_GID` a tu UID/GID
+local para que pueda escribir en `./data`.
 
 ## Seguridad
 
@@ -243,7 +247,11 @@ Si usas el `docker-compose.yml` incluido, `.env` es opcional (`required: false`)
   `Referrer-Policy`, `Permissions-Policy` y `HSTS` en producción.
 - **Superficies separadas**: `/v1/*` solo con API key; el panel (`/`, `/api/*`, `/doc`, `/ui`)
   solo con sesión.
+- **Rate limiting**: límite de intentos de login por IP y de peticiones a `/v1/*` (responde `429`).
+- **CSRF**: las mutaciones del panel validan `Origin`/`Sec-Fetch-Site`; respuestas autenticadas con
+  `Cache-Control: no-store`.
+- **Contenedor sin privilegios**: la imagen corre como usuario no-root.
 - Si expones el servicio detrás de un reverse proxy, activa `TRUST_PROXY=true` para que la
-  IP del cliente se lea de `X-Forwarded-For`/`X-Real-IP` (necesario para la allowlist).
+  IP del cliente se lea de `X-Forwarded-For`/`X-Real-IP` (necesario para la allowlist y el rate limit).
 - Cambia `ADMIN_PASSWORD` antes de exponer el servicio y configura `EXPO_ACCESS_TOKEN` si usas
   Enhanced Push Security.

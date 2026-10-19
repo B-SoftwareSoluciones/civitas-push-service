@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { Hono } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
 
@@ -12,6 +13,9 @@ import {
   type ApiKeyRow,
 } from '../db/api-keys';
 import { listDevices } from '../db/repository';
+import { noStore } from '../middleware/no-store';
+import { rateLimit } from '../middleware/rate-limit';
+import { requireSameOrigin } from '../middleware/same-origin';
 import { SESSION_COOKIE, SESSION_MAX_AGE, createSessionValue, hasValidSession, requireWebAuth } from '../middleware/session';
 import { generateApiKey } from '../services/api-keys';
 import { notifySchema, runNotify } from '../routes/notify';
@@ -19,6 +23,14 @@ import { dashboardPage } from '../web/dashboard';
 import { loginPage } from '../web/login';
 
 export const webRoutes = new Hono();
+
+webRoutes.use('*', noStore);
+
+function safeEqual(a: string, b: string): boolean {
+  const left = createHash('sha256').update(a).digest();
+  const right = createHash('sha256').update(b).digest();
+  return timingSafeEqual(left, right);
+}
 
 function serializeApiKey(row: ApiKeyRow) {
   return {
@@ -51,26 +63,31 @@ webRoutes.get('/login', (c) => {
   return c.html(loginPage());
 });
 
-webRoutes.post('/login', async (c) => {
-  const body = await c.req.parseBody();
-  const user = String(body.user ?? '');
-  const password = String(body.password ?? '');
+webRoutes.post(
+  '/login',
+  requireSameOrigin,
+  rateLimit({ name: 'login', windowMs: 5 * 60_000, max: config.loginRateLimitMax }),
+  async (c) => {
+    const body = await c.req.parseBody();
+    const user = String(body.user ?? '');
+    const password = String(body.password ?? '');
 
-  if (user !== config.adminUser || password !== config.adminPassword) {
-    return c.html(loginPage('Usuario o contraseña incorrectos.'), 401);
-  }
+    if (!safeEqual(user, config.adminUser) || !safeEqual(password, config.adminPassword)) {
+      return c.html(loginPage('Usuario o contraseña incorrectos.'), 401);
+    }
 
-  setCookie(c, SESSION_COOKIE, createSessionValue(), {
-    path: '/',
-    httpOnly: true,
-    sameSite: 'Lax',
-    maxAge: SESSION_MAX_AGE,
-    secure: config.isProduction,
-  });
-  return c.redirect('/');
-});
+    setCookie(c, SESSION_COOKIE, createSessionValue(), {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+      maxAge: SESSION_MAX_AGE,
+      secure: config.isProduction,
+    });
+    return c.redirect('/');
+  },
+);
 
-webRoutes.post('/logout', (c) => {
+webRoutes.post('/logout', requireSameOrigin, (c) => {
   deleteCookie(c, SESSION_COOKIE, { path: '/' });
   return c.redirect('/login');
 });

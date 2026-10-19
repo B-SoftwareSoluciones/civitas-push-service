@@ -1,18 +1,19 @@
 services:
   civitas-access:
-    image: jom3l/civitas-access:latest
+    image: ${CIVITAS_IMAGE:-jom3l/civitas-access:latest}
+    # Ejecuta como el UID/GID del host para poder escribir en ./data (SQLite).
+    user: '${CIVITAS_UID:-1000}:${CIVITAS_GID:-1000}'
     ports:
       - '8790:8790'
+    # Los secretos (ADMIN_PASSWORD, SESSION_SECRET, API_KEY_PEPPER, EXPO_ACCESS_TOKEN)
+    # viven en .env, nunca en este archivo.
+    env_file:
+      - path: .env
+        required: true
     environment:
       PORT: '8790'
       DATABASE_PATH: /app/data/push.sqlite
-      EXPO_ACCESS_TOKEN: ''
-      ADMIN_USER: admin
-      ADMIN_PASSWORD: admin123
-      SESSION_SECRET: lq9Yqk4cW3n8vJm0pR2sT6uB1xH5zA7dG9kM2nP4rS8tV0wX
-      API_KEY_PEPPER: cambia-este-pepper
-      TRUST_PROXY: 'false'
-      CORS_ORIGIN: '*'
+      TRUST_PROXY: '${TRUST_PROXY:-false}'
     volumes:
       - ./data:/app/data
     restart: unless-stopped

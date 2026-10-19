@@ -1,16 +1,21 @@
-# No requiere .env: si no defines SESSION_SECRET/API_KEY_PEPPER, el servidor los
-# genera automáticamente y los persiste en ./data/runtime.env (volumen), de modo
-# que las API keys y las sesiones sobreviven a los reinicios.
+# Requiere .env con ADMIN_PASSWORD (obligatoria). Si no defines
+# SESSION_SECRET/API_KEY_PEPPER, el servidor los genera automáticamente y los
+# persiste en ./data/runtime.env (volumen), de modo que las API keys y las
+# sesiones sobreviven a los reinicios.
 services:
   civitas-access:
     build: .
+    # Ejecuta como el UID/GID del host para poder escribir en ./data (SQLite).
+    user: '${CIVITAS_UID:-1000}:${CIVITAS_GID:-1000}'
     ports:
       - '8790:8790'
     env_file:
       - path: .env
-        required: false
+        required: true
     environment:
+      PORT: '8790'
       DATABASE_PATH: /app/data/push.sqlite
+      TRUST_PROXY: '${TRUST_PROXY:-false}'
     volumes:
       - ./data:/app/data
     restart: unless-stopped
