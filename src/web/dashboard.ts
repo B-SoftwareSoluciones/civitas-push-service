@@ -1,4 +1,5 @@
 import { apiKeysPanel, apiKeysScript } from './api-keys';
+import { batchesPanel, batchesScript } from './batches';
 import {
   appShell,
   baseCss,
@@ -14,6 +15,16 @@ function notifyPanel(): string {
             <h2>Enviar notificación</h2>
             <form id="notify-form">
               <fieldset class="fieldset">
+                <legend>Plantillas de visita</legend>
+                <div class="template-actions">
+                  <button type="button" class="ghost" data-template="created">Visita creada</button>
+                  <button type="button" class="ghost" data-template="entry">Entrada</button>
+                  <button type="button" class="ghost" data-template="exit">Salida</button>
+                </div>
+                <p class="muted small">Precargan el tipo, estado, pantalla, título, mensaje y la fecha actual.</p>
+              </fieldset>
+
+              <fieldset class="fieldset">
                 <legend>Destino</legend>
                 <label>Device ID
                   <input id="deviceId" required placeholder="device-123" />
@@ -21,6 +32,11 @@ function notifyPanel(): string {
                 <label>Expo Token
                   <input id="token" required placeholder="ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" />
                 </label>
+                <label class="checkbox">
+                  <input id="saveDevice" type="checkbox" />
+                  <span>Guardar dispositivo <span class="muted small">(opcional · por defecto no se guarda)</span></span>
+                </label>
+                <p class="muted small">Si está desmarcado, el push se envía igual pero el dispositivo no aparece en la lista.</p>
               </fieldset>
 
               <fieldset class="fieldset">
@@ -29,7 +45,7 @@ function notifyPanel(): string {
                   <label>Título <span class="muted small">(opcional)</span>
                     <input id="title" placeholder="Notificación" />
                   </label>
-                  <label>URL <span class="muted small">(opcional · si se omite abre Home)</span>
+                  <label>URL <span class="muted small">(opcional · deep link, no cambia la pantalla)</span>
                     <input id="url" placeholder="/visitas/..." />
                   </label>
                 </div>
@@ -42,10 +58,31 @@ function notifyPanel(): string {
                 <legend>Enrutamiento en la app</legend>
                 <div class="row">
                   <label>Tipo <span class="muted small">(opcional)</span>
-                    <input id="type" placeholder="visit_registered" />
+                    <input id="type" list="notify-type-options" placeholder="visit_entry" />
                   </label>
-                  <label>Pantalla <span class="muted small">(opcional · Home por defecto)</span>
-                    <input id="screen" placeholder="Home" />
+                  <label>Pantalla <span class="muted small">(opcional · vacío = automática: VisitStatus o Splash)</span>
+                    <input id="screen" list="notify-screen-options" placeholder="VisitStatus" />
+                  </label>
+                </div>
+                <div class="row">
+                  <label>Estado de visita <span class="muted small">(opcional)</span>
+                    <select id="status">
+                      <option value="">Sin estado</option>
+                      <option value="pending">pending · aún no ingresa</option>
+                      <option value="inside">inside · dentro</option>
+                      <option value="outside">outside · fuera</option>
+                    </select>
+                  </label>
+                  <label>Fecha del evento <span class="muted small">(opcional)</span>
+                    <input id="occurredAt" type="datetime-local" />
+                  </label>
+                </div>
+                <div class="row">
+                  <label>Visitante <span class="muted small">(opcional)</span>
+                    <input id="visitor" placeholder="Juan Pérez" />
+                  </label>
+                  <label>Propiedad <span class="muted small">(opcional)</span>
+                    <input id="propertyLabel" placeholder="Casa 4" />
                   </label>
                 </div>
                 <div class="row">
@@ -58,7 +95,7 @@ function notifyPanel(): string {
                 </div>
                 <div class="row">
                   <label>Residence ID <span class="muted small">(opcional)</span>
-                    <input id="residenceId" type="number" placeholder="2" />
+                    <input id="residenceId" placeholder="2" />
                   </label>
                   <label>Prioridad <span class="muted small">(opcional)</span>
                     <select id="priority">
@@ -69,12 +106,30 @@ function notifyPanel(): string {
                     </select>
                   </label>
                 </div>
-                <label>Canal <span class="muted small">(opcional · p. ej. panic)</span>
+                <label>Canal <span class="muted small">(opcional · p. ej. panic_alarm)</span>
                   <input id="channelId" placeholder="default" />
                 </label>
+                <datalist id="notify-type-options">
+                  <option value="visit_created"></option>
+                  <option value="visit_entry"></option>
+                  <option value="visit_exit"></option>
+                  <option value="panic"></option>
+                </datalist>
+                <datalist id="notify-screen-options">
+                  <option value="VisitStatus"></option>
+                  <option value="Splash"></option>
+                  <option value="Home"></option>
+                  <option value="AccessPass"></option>
+                  <option value="SecurityDashboard"></option>
+                </datalist>
               </fieldset>
 
-              <button type="submit">Enviar notificación</button>
+              <div class="payload-preview">
+                <div class="muted small">Payload que se enviará</div>
+                <pre id="payload-preview">{}</pre>
+              </div>
+
+              <button type="submit">Enviar ahora</button>
               <div id="result" class="toast"></div>
             </form>
           </div>
@@ -105,7 +160,146 @@ function dashboardScript(): string {
       var devicesEl = document.getElementById('devices');
       var searchEl = document.getElementById('device-search');
       var refreshEl = document.getElementById('devices-refresh');
+      var previewEl = document.getElementById('payload-preview');
       var allDevices = [];
+      var requestKey = null;
+      var requestBody = null;
+      var submitButton = form.querySelector('button[type="submit"]');
+      var templates = {
+        created: {
+          type: 'visit_created', status: 'pending', title: 'Visita registrada',
+          message: 'Se registró una visita en tu propiedad.'
+        },
+        entry: {
+          type: 'visit_entry', status: 'inside', title: 'Entrada registrada',
+          message: 'El visitante ingresó a tu propiedad.'
+        },
+        exit: {
+          type: 'visit_exit', status: 'outside', title: 'Salida registrada',
+          message: 'El visitante salió de tu propiedad.'
+        }
+      };
+
+      function value(id) {
+        var node = document.getElementById(id);
+        return node ? String(node.value || '').trim() : '';
+      }
+
+      function setValue(id, text) {
+        var node = document.getElementById(id);
+        if (node) node.value = text;
+      }
+
+      function localDateTimeValue() {
+        var now = new Date();
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+          'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+      }
+
+      function toIso(text) {
+        if (!text) return '';
+        var date = new Date(text);
+        return isNaN(date.getTime()) ? text : date.toISOString();
+      }
+
+      function collectPayload() {
+        var payload = {
+          deviceId: value('deviceId'),
+          token: value('token'),
+          message: value('message')
+        };
+        var title = value('title');
+        var url = value('url');
+        if (title) payload.title = title;
+        if (url) payload.url = url;
+
+        var data = {};
+        var type = value('type');
+        var screen = value('screen');
+        var visitId = value('visitId');
+        var status = value('status');
+        var visitor = value('visitor');
+        var propertyLabel = value('propertyLabel');
+        var occurredAt = toIso(value('occurredAt'));
+        var propertyId = value('propertyId');
+        var residenceId = value('residenceId');
+        if (type) data.type = type;
+        if (screen) data.screen = screen;
+        if (visitId) data.visitId = visitId;
+        if (status) data.status = status;
+        if (visitor) data.visitor = visitor;
+        if (propertyLabel) data.propertyLabel = propertyLabel;
+        if (occurredAt) data.occurredAt = occurredAt;
+        if (propertyId) data.propertyId = Number(propertyId);
+        if (residenceId) data.residenceId = residenceId;
+        if (Object.keys(data).length) payload.data = data;
+
+        var priority = value('priority');
+        var channelId = value('channelId');
+        if (priority) payload.priority = priority;
+        if (channelId) payload.channelId = channelId;
+
+        var saveDevice = document.getElementById('saveDevice');
+        if (saveDevice && saveDevice.checked) payload.saveDevice = true;
+        return payload;
+      }
+
+      function updatePreview() {
+        if (!previewEl) return;
+        previewEl.textContent = JSON.stringify(collectPayload(), null, 2);
+      }
+
+      function applyTemplate(name) {
+        var template = templates[name];
+        if (!template) return;
+        setValue('type', template.type);
+        setValue('status', template.status);
+        setValue('screen', 'VisitStatus');
+        setValue('title', template.title);
+        setValue('message', template.message);
+        setValue('occurredAt', localDateTimeValue());
+        updatePreview();
+      }
+
+      function loadJobs() {
+        fetch('/api/jobs').then(function (res) {
+          if (res.status === 401) { window.location.href = '/login'; return null; }
+          if (!res.ok) throw new Error('queue_unavailable');
+          return res.json();
+        }).then(function (data) {
+          if (!data) return;
+          document.getElementById('queue-health').textContent = data.workerHealthy ? 'Procesador activo' : 'Procesador sin actividad reciente';
+          var container = document.getElementById('queue-jobs');
+          container.textContent = '';
+          var labels = { queued: 'En cola', sending: 'Enviando', awaiting_receipt: 'Esperando recibo', accepted: 'Aceptada por proveedor', dead: 'Fallida' };
+          data.jobs.forEach(function (job) {
+            var row = el('div', 'device');
+            row.appendChild(el('div', 'device-id', job.deviceId + ' · ' + labels[job.status]));
+            row.appendChild(el('div', 'muted small', job.id + ' · Prioridad: ' + job.priority + ' · Intentos: ' + job.attempts + (job.error ? ' · ' + job.error : '')));
+            if (job.status === 'dead' && job.deliveryMode !== 'immediate') {
+              var retry = el('button', 'ghost', 'Reintentar');
+              retry.type = 'button';
+              retry.addEventListener('click', function () {
+                if (!confirm('Reintentar esta solicitud puede duplicar un aviso si el resultado anterior fue incierto. ¿Continuar?')) return;
+                retry.disabled = true;
+                fetch('/api/jobs/' + job.id + '/retry', { method: 'POST' })
+                  .then(function (res) { return res.json(); })
+                  .then(function (result) {
+                    if (!result.ok) show('err', result.error);
+                    loadJobs();
+                  }).catch(function () { show('err', 'No se pudo reintentar'); })
+                  .finally(function () { retry.disabled = false; });
+              });
+              row.appendChild(retry);
+            }
+            container.appendChild(row);
+          });
+          if (!data.jobs.length) container.appendChild(el('p', 'muted small', 'Sin solicitudes.'));
+        }).catch(function () {
+          document.getElementById('queue-health').textContent = 'No se pudo consultar la cola';
+        });
+      }
 
       function show(kind, text) {
         result.className = 'toast show ' + kind;
@@ -123,6 +317,7 @@ function dashboardScript(): string {
         document.getElementById('deviceId').value = device.deviceId;
         document.getElementById('token').value = device.token || '';
         window.location.hash = '#/notify';
+        updatePreview();
         document.getElementById('message').focus();
       }
 
@@ -167,49 +362,37 @@ function dashboardScript(): string {
 
       if (searchEl) searchEl.addEventListener('input', renderDevices);
       if (refreshEl) refreshEl.addEventListener('click', loadDevices);
+      form.addEventListener('input', updatePreview);
+      form.addEventListener('change', updatePreview);
+      Array.prototype.forEach.call(document.querySelectorAll('[data-template]'), function (button) {
+        button.addEventListener('click', function () { applyTemplate(button.getAttribute('data-template')); });
+      });
 
       form.addEventListener('submit', function (event) {
         event.preventDefault();
-        var payload = {
-          deviceId: document.getElementById('deviceId').value.trim(),
-          token: document.getElementById('token').value.trim(),
-          message: document.getElementById('message').value.trim()
-        };
-        var title = document.getElementById('title').value.trim();
-        var url = document.getElementById('url').value.trim();
-        if (title) payload.title = title;
-        if (url) payload.url = url;
-
-        var data = {};
-        var type = document.getElementById('type').value.trim();
-        var screen = document.getElementById('screen').value.trim();
-        var visitId = document.getElementById('visitId').value.trim();
-        var propertyId = document.getElementById('propertyId').value.trim();
-        var residenceId = document.getElementById('residenceId').value.trim();
-        if (type) data.type = type;
-        if (screen) data.screen = screen;
-        if (visitId) data.visitId = visitId;
-        if (propertyId) data.propertyId = Number(propertyId);
-        if (residenceId) data.residenceId = Number(residenceId);
-        if (Object.keys(data).length) payload.data = data;
-
-        var priority = document.getElementById('priority').value;
-        var channelId = document.getElementById('channelId').value.trim();
-        if (priority) payload.priority = priority;
-        if (channelId) payload.channelId = channelId;
-
-        show('ok', 'Enviando...');
+        var payload = collectPayload();
+        var serialized = JSON.stringify(payload);
+        if (requestBody !== serialized || !requestKey) {
+          requestBody = serialized;
+          requestKey = crypto.randomUUID();
+        }
+        submitButton.disabled = true;
+        show('ok', 'Enviando a Expo...');
         fetch('/api/notify', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload)
+          headers: { 'content-type': 'application/json', 'idempotency-key': requestKey },
+          body: serialized
         })
           .then(function (res) {
             return res.json().then(function (data) { return { ok: res.ok, data: data }; });
           })
           .then(function (out) {
             if (out.ok && out.data.ok) {
-              show('ok', 'Enviado a ' + out.data.sent + ' dispositivo(s).');
+              show('ok', out.data.sent === 0
+                ? 'Sin capacidad inmediata. Notificación en cola: ' + out.data.job.id
+                : 'Expo aceptó la notificación. Ticket: ' + out.data.ticketId);
+              requestKey = null;
+              loadJobs();
               loadDevices();
             } else {
               show('err', 'Error: ' + (out.data.error || 'desconocido'));
@@ -217,10 +400,13 @@ function dashboardScript(): string {
           })
           .catch(function () {
             show('err', 'No se pudo contactar al servidor.');
-          });
+          }).finally(function () { submitButton.disabled = false; });
       });
 
+      updatePreview();
       loadDevices();
+      loadJobs();
+      setInterval(function () { if (!document.hidden) loadJobs(); }, 5000);
     })();
   </script>`;
 }
@@ -242,9 +428,10 @@ export function dashboardPage(user: string): string {
 <body>
   ${appShell({
     user,
-    content: [notifyPanel(), devicesPanel(), apiKeysPanel()].join('\n'),
+    content: [notifyPanel(), batchesPanel(), devicesPanel(), apiKeysPanel()].join('\n'),
   })}
   ${dashboardScript()}
+  ${batchesScript()}
   ${apiKeysScript()}
   ${shellScript()}
   ${themeToggleScript()}

@@ -11,8 +11,6 @@ export async function requireSameOrigin(c: Context, next: Next): Promise<Respons
   }
 
   const origin = c.req.header('origin');
-  // Con Referrer-Policy estricta los navegadores envían `Origin: null` en
-  // formularios same-origin; en ese caso confiamos en Sec-Fetch-Site.
   if (origin === 'null') {
     if (site === 'same-origin') return next();
     return c.json({ ok: false, error: 'forbidden_origin' }, 403);

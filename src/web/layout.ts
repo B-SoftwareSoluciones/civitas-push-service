@@ -89,6 +89,40 @@ export const baseCss = `
     box-shadow: 0 0 0 3px var(--focus-ring);
   }
   textarea { resize: vertical; min-height: 96px; }
+  label.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 0.2rem;
+    color: var(--text);
+  }
+  label.checkbox input {
+    width: auto;
+    margin: 0;
+    accent-color: var(--primary);
+  }
+  .template-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .payload-preview { margin: 0 0 1rem; }
+  .payload-preview pre {
+    margin: 0.35rem 0 0;
+    padding: 0.85rem;
+    max-height: 280px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text);
+    background: color-mix(in srgb, var(--primary) 6%, var(--input-bg));
+    border: 1px solid var(--input-border);
+    border-radius: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
   button {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -363,6 +397,12 @@ export function appShell({ user, content }: ShellOptions): string {
         <span>Civitas Access<small>Panel de notificaciones</small></span>
       </a>
       <nav class="nav" role="tablist" aria-label="Secciones">
+        <button class="nav-item" type="button" role="tab" data-route="#/notify" aria-selected="false" aria-controls="panel-notify">
+          ${icon('external')}<span>Notificación individual</span>
+        </button>
+        <button class="nav-item" type="button" role="tab" data-route="#/batches" aria-selected="false" aria-controls="panel-batches">
+          ${icon('devices')}<span>Lotes</span>
+        </button>
         <button class="nav-item" type="button" role="tab" data-route="#/devices" aria-selected="false" aria-controls="panel-devices">
           ${icon('devices')}<span>Dispositivos</span><span class="badge" id="badge-devices" hidden>0</span>
         </button>
@@ -404,7 +444,8 @@ export function shellScript(): string {
   return `<script>
     (function () {
       var routes = {
-        '#/notify': { title: 'Notificación', subtitle: 'Envía una notificación push a un dispositivo.', panel: 'panel-notify', nav: null },
+        '#/notify': { title: 'Notificación', subtitle: 'Envía una notificación push inmediata a un dispositivo.', panel: 'panel-notify', nav: '#/notify' },
+        '#/batches': { title: 'Lotes', subtitle: 'Progreso del procesamiento y resultados por dispositivo.', panel: 'panel-batches', nav: '#/batches' },
         '#/devices': { title: 'Dispositivos', subtitle: 'Dispositivos registrados y su último contacto.', panel: 'panel-devices', nav: '#/devices' },
         '#/keys': { title: 'API Keys', subtitle: 'Claves de acceso para servicios externos.', panel: 'panel-keys', nav: '#/keys' }
       };
