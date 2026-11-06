@@ -86,6 +86,44 @@ test('individual notify contacts Expo synchronously and replays idempotently wit
   assert.equal(db.prepare("SELECT id FROM push_jobs WHERE delivery_mode = 'immediate' AND status = 'queued'").get(), undefined);
 });
 
+test('event envelope is accepted and uses its event id as idempotency key', async (context) => {
+  db.prepare('UPDATE push_worker SET next_send_at = 0').run();
+  let calls = 0;
+  context.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return Response.json({ data: [{ status: 'ok', id: 'envelope-ticket' }] });
+  });
+  const envelope = {
+    id: 'evt-api-visit-entry',
+    type: 'visit.entry',
+    occurredAt: '2026-11-05T14:32:00-06:00',
+    source: 'civitas.access.visits',
+    data: { visitId: 'VIS-0001', status: 'inside', visitor: 'Juan Pérez' },
+    notification: {
+      deviceId: 'api-envelope-device',
+      token: 'ExponentPushToken[api-envelope]',
+      title: 'Entrada registrada',
+      message: 'Juan Pérez ingresó a tu propiedad',
+      screen: 'VisitStatus',
+      priority: 'high',
+    },
+  };
+  const sendEnvelope = (body: unknown) => app.request('/v1/notify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': firstKey },
+    body: JSON.stringify(body),
+  });
+
+  const response = await sendEnvelope(envelope);
+  assert.equal(response.status, 200);
+  const body = jobResponse.parse(await response.json());
+  assert.equal(body.job.status, 'awaiting_receipt');
+  assert.equal(body.job.priority, 'high');
+  assert.equal((await sendEnvelope(envelope)).status, 200);
+  assert.equal(calls, 1);
+  assert.equal((await sendEnvelope({ ...envelope, notification: { ...envelope.notification, message: 'changed' } })).status, 409);
+});
+
 test('immediate upstream failures are not enqueued for automatic retries', async (context) => {
   db.prepare('UPDATE push_worker SET next_send_at = 0').run();
   context.mock.method(globalThis, 'fetch', async () => new Response('', { status: 503 }));
