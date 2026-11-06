@@ -2,8 +2,28 @@
   "info": {
     "_postman_id": "c1v1t4s-4cc3-0000-0000-000000000001",
     "name": "Civitas Access API",
-    "description": "API de registro de dispositivos y envío de notificaciones push (Expo) de Civitas Access.\n\nTodos los endpoints bajo /v1 requieren API key; cada request ya incluye el header `X-API-Key: {{apiKey}}`, así que solo debes configurar la variable `apiKey`. `/health` es público y `/doc`/`/ui` usan sesión web. Documentación interactiva en /doc (OpenAPI) y /ui (Swagger UI, requiere sesión).\n\nLa carpeta Notify → Visitas contiene los eventos `visit_created`, `visit_entry` y `visit_exit` con sus pruebas de `saveDevice` y de pantalla automática `VisitStatus`. `occurredAt` se actualiza automáticamente antes de cada request.\n\nEl evento `panic` usa el sonido de emergencia `panic.wav`, el canal Android `panic_alarm` y `interruptionLevel: time-sensitive` en iOS. La app móvil debe incluir el sonido y crear el canal antes de recibir el aviso. En Android 8+ el sonido lo define el canal, no el payload.",
+    "description": "API de registro de dispositivos y envío de notificaciones push (Expo) de Civitas Access.\n\nTodos los endpoints bajo /v1 requieren API key; la colección aplica `X-API-Key: {{apiKey}}` como auth heredada a todos los requests, así que solo debes configurar la variable `apiKey`. `/health` es público y `/doc`/`/ui` usan sesión web. Documentación interactiva en /doc (OpenAPI) y /ui (Swagger UI, requiere sesión).\n\nLa carpeta Notify → Visitas contiene los eventos `visit_created`, `visit_entry` y `visit_exit` con sus pruebas de `saveDevice` y de pantalla automática `VisitStatus`. `occurredAt` se actualiza automáticamente antes de cada request.\n\nEl evento `panic` usa el sonido de emergencia `panic.wav`, el canal Android `panic_alarm` y `interruptionLevel: time-sensitive` en iOS. La app móvil debe incluir el sonido y crear el canal antes de recibir el aviso. En Android 8+ el sonido lo define el canal, no el payload.\n\nLa carpeta Notify → Event Envelope contiene el sobre estándar (`id`, `type`, `version`, `occurredAt`, `source`, `data`) y ejemplos de entrada, salida, notificación genérica sin pantalla (`screen: None`) y anuncio genérico que abre la pantalla Announcements.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
     {
@@ -120,12 +140,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/devices",
               "host": [
@@ -160,10 +175,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
               }
             ],
             "body": {
@@ -209,10 +220,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
               }
             ],
             "body": {
@@ -255,12 +262,7 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/devices/{{deviceId}}",
               "host": [
@@ -299,12 +301,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/devices",
               "host": [
@@ -336,12 +333,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/devices",
               "host": [
@@ -381,10 +373,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
               }
             ],
             "body": {
@@ -434,10 +422,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -484,10 +468,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -534,10 +514,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -584,10 +560,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -634,10 +606,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -684,10 +652,6 @@
                   {
                     "key": "Content-Type",
                     "value": "application/json"
-                  },
-                  {
-                    "key": "X-API-Key",
-                    "value": "{{apiKey}}"
                   }
                 ],
                 "body": {
@@ -716,6 +680,218 @@
           ]
         },
         {
+          "name": "Event Envelope",
+          "item": [
+            {
+              "name": "Event Envelope · Entrada de visita",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Enviada o encolada', () => pm.expect([200, 202]).to.include(pm.response.code));",
+                      "const body = pm.response.json();",
+                      "const raw = pm.request.body.raw || '';",
+                      "pm.test('event envelope de entrada', () => {",
+                      "  pm.expect(raw).to.include('\"type\": \"visit.entry\"');",
+                      "  pm.expect(raw).to.include('\"screen\": \"VisitStatus\"');",
+                      "  pm.expect(raw).to.include('\"status\": \"inside\"');",
+                      "});",
+                      "if (body.job) pm.collectionVariables.set('jobId', body.job.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.entry\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"inside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Entrada registrada\",\n    \"message\": \"{{visitor}} ingresó a tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notify"
+                  ]
+                },
+                "description": "Event Envelope de entrada de visita. La app abre VisitStatus con estado inside."
+              },
+              "response": []
+            },
+            {
+              "name": "Event Envelope · Salida de visita",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Enviada o encolada', () => pm.expect([200, 202]).to.include(pm.response.code));",
+                      "const body = pm.response.json();",
+                      "const raw = pm.request.body.raw || '';",
+                      "pm.test('event envelope de salida', () => {",
+                      "  pm.expect(raw).to.include('\"type\": \"visit.exit\"');",
+                      "  pm.expect(raw).to.include('\"screen\": \"VisitStatus\"');",
+                      "  pm.expect(raw).to.include('\"status\": \"outside\"');",
+                      "});",
+                      "if (body.job) pm.collectionVariables.set('jobId', body.job.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.exit\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"outside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Salida registrada\",\n    \"message\": \"{{visitor}} salió de tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notify"
+                  ]
+                },
+                "description": "Event Envelope de salida de visita. La app abre VisitStatus con estado outside."
+              },
+              "response": []
+            },
+            {
+              "name": "Event Envelope · Notificación genérica (sin pantalla)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Enviada o encolada', () => pm.expect([200, 202]).to.include(pm.response.code));",
+                      "const body = pm.response.json();",
+                      "const raw = pm.request.body.raw || '';",
+                      "pm.test('event envelope genérico sin pantalla', () => {",
+                      "  pm.expect(raw).to.include('\"type\": \"notification.generic\"');",
+                      "  pm.expect(raw).to.include('\"screen\": \"None\"');",
+                      "});",
+                      "if (body.job) pm.collectionVariables.set('jobId', body.job.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"notification.generic\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.notifications\",\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Aviso general\",\n    \"message\": \"Nuevo aviso de Civitas\",\n    \"screen\": \"None\",\n    \"priority\": \"normal\",\n    \"saveDevice\": false\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notify"
+                  ]
+                },
+                "description": "Event Envelope genérico. Al tocar el push la app no navega a ninguna pantalla (screen None)."
+              },
+              "response": []
+            },
+            {
+              "name": "Event Envelope · Anuncio genérico (abre Announcements)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Enviada o encolada', () => pm.expect([200, 202]).to.include(pm.response.code));",
+                      "const body = pm.response.json();",
+                      "const raw = pm.request.body.raw || '';",
+                      "pm.test('event envelope de anuncio', () => {",
+                      "  pm.expect(raw).to.include('\"type\": \"announcement.generic\"');",
+                      "  pm.expect(raw).to.include('\"screen\": \"Announcements\"');",
+                      "  pm.expect(raw).to.include('\"announcementId\"');",
+                      "});",
+                      "if (body.job) pm.collectionVariables.set('jobId', body.job.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"announcement.generic\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.announcements\",\n  \"data\": {\n    \"announcementId\": \"ANN-0001\",\n    \"category\": \"general\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Anuncio de la administración\",\n    \"message\": \"El área común estará cerrada el sábado de 8:00 a 12:00.\",\n    \"screen\": \"Announcements\",\n    \"priority\": \"normal\",\n    \"saveDevice\": false\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notify"
+                  ]
+                },
+                "description": "Event Envelope de anuncio genérico. Al tocar el push la app abre la pantalla Announcements."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Aviso sin screen (Splash por defecto)",
           "event": [
             {
@@ -736,10 +912,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
               }
             ],
             "body": {
@@ -773,10 +945,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
               }
             ],
             "body": {

@@ -1,17 +1,25 @@
 import { config } from '../config';
 import { queue } from '../queue/runtime';
 import { publicJob, QueueError } from '../queue/store';
-import { buildMessage, validateIdempotency, type NotifyInput } from './notifications';
+import {
+  buildMessage,
+  normalizeNotifyInput,
+  validateIdempotency,
+  type NotifyRequestInput,
+} from './notifications';
 import { createExpoTransport, ExpoRequestError } from './expo-push';
 
 const transport = createExpoTransport(config.expoAccessToken);
 
-export async function runNotify(input: NotifyInput, owner = 'admin', key?: string) {
-  validateIdempotency(key);
+export async function runNotify(request: NotifyRequestInput, owner = 'admin', key?: string) {
+  const normalized = normalizeNotifyInput(request);
+  const input = normalized.input;
+  const idempotencyKey = key ?? normalized.idempotencyKey;
+  validateIdempotency(idempotencyKey);
   const message = buildMessage(input);
   const saveDevice = input.saveDevice === true;
   if (saveDevice) queue.registerToken(input.token);
-  const { job, replayed } = queue.beginImmediate(owner, input.deviceId, message, key, Date.now(), saveDevice);
+  const { job, replayed } = queue.beginImmediate(owner, input.deviceId, message, idempotencyKey, Date.now(), saveDevice);
   if (job.delivery_mode === 'queued' && (job.status === 'queued' || job.status === 'sending')) {
     return { ok: true as const, sent: 0 as const, job: publicJob(job) };
   }

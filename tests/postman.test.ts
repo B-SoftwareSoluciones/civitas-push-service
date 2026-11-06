@@ -8,6 +8,7 @@ const collection = JSON.parse(
   readFileSync(new URL('../postman_collection.json', import.meta.url), 'utf8')
 ) as {
   info: { name: string };
+  auth?: { type: string; apikey: Array<{ key: string; value: string }> };
   event: Array<{ listen: string; script: { exec: string[] } }>;
   variable: Array<{ key: string }>;
   item: Array<{ item?: Request[] } & Request>;
@@ -19,6 +20,11 @@ function flatten(items: Array<{ item?: Request[] } & Request>): Request[] {
 
 test('the single Postman collection contains the visit notification flows', () => {
   assert.equal(collection.info.name, 'Civitas Access API');
+  assert.equal(collection.auth?.type, 'apikey');
+  const authEntries = collection.auth?.apikey ?? [];
+  assert.equal(authEntries.find((entry) => entry.key === 'key')?.value, 'X-API-Key');
+  assert.equal(authEntries.find((entry) => entry.key === 'value')?.value, '{{apiKey}}');
+  assert.equal(authEntries.find((entry) => entry.key === 'in')?.value, 'header');
   assert.ok(collection.event.some((entry) => entry.script.exec.join('\n').includes('occurredAt')));
   const variableKeys = collection.variable.map((entry) => entry.key);
   for (const key of [
@@ -37,6 +43,10 @@ test('the single Postman collection contains the visit notification flows', () =
     'Notificar y guardar dispositivo',
     'Entrada sin screen (prueba de pantalla automática)',
     'Formato legado AccessPass',
+    'Event Envelope · Entrada de visita',
+    'Event Envelope · Salida de visita',
+    'Event Envelope · Notificación genérica (sin pantalla)',
+    'Event Envelope · Anuncio genérico (abre Announcements)',
     'Aviso sin screen (Splash por defecto)',
     'Pánico (ejemplo)',
     'Crear lote de visita (entrada)',
@@ -80,6 +90,26 @@ test('the single Postman collection contains the visit notification flows', () =
   assert.ok(panic?.request?.body?.raw?.includes('"channelId": "{{panicChannel}}"'));
   assert.ok(panic?.request?.body?.raw?.includes('"interruptionLevel": "{{interruptionLevel}}"'));
   assert.ok(panic?.request?.body?.raw?.includes('"residenceId": "{{residenceId}}"'));
+
+  const envelopeEntry = requests.find((request) => request.name === 'Event Envelope · Entrada de visita');
+  assert.ok(envelopeEntry?.request?.body?.raw?.includes('"type": "visit.entry"'));
+  assert.ok(envelopeEntry?.request?.body?.raw?.includes('"screen": "VisitStatus"'));
+  assert.ok(envelopeEntry?.request?.body?.raw?.includes('"notification"'));
+  assert.ok(envelopeEntry?.request?.body?.raw?.includes('"occurredAt": "{{occurredAt}}"'));
+  assert.ok(envelopeEntry?.request?.body?.raw?.includes('"status": "inside"'));
+
+  const envelopeExit = requests.find((request) => request.name === 'Event Envelope · Salida de visita');
+  assert.ok(envelopeExit?.request?.body?.raw?.includes('"type": "visit.exit"'));
+  assert.ok(envelopeExit?.request?.body?.raw?.includes('"status": "outside"'));
+
+  const envelopeGeneric = requests.find((request) => request.name === 'Event Envelope · Notificación genérica (sin pantalla)');
+  assert.ok(envelopeGeneric?.request?.body?.raw?.includes('"type": "notification.generic"'));
+  assert.ok(envelopeGeneric?.request?.body?.raw?.includes('"screen": "None"'));
+
+  const envelopeAnnouncement = requests.find((request) => request.name === 'Event Envelope · Anuncio genérico (abre Announcements)');
+  assert.ok(envelopeAnnouncement?.request?.body?.raw?.includes('"type": "announcement.generic"'));
+  assert.ok(envelopeAnnouncement?.request?.body?.raw?.includes('"screen": "Announcements"'));
+  assert.ok(envelopeAnnouncement?.request?.body?.raw?.includes('"announcementId"'));
 
   const panicBatch = requests.find((request) => request.name === 'Crear lote de pánico (guardias)');
   assert.ok(panicBatch?.request?.body?.raw?.includes('"type": "panic"'));

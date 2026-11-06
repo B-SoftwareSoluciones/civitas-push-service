@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { queue } from '../queue/runtime';
 import { publicJob, QueueError } from '../queue/store';
-import { notifySchema } from '../services/notifications';
+import { notifyRequestSchema } from '../services/notifications';
 import { runNotify } from '../services/dispatch';
 
 export const jobSchema = z.object({
@@ -21,11 +21,11 @@ export const notifyRoutes = new OpenAPIHono<{ Variables: { apiKey: { id: string 
 });
 
 notifyRoutes.openapi(createRoute({
-  method: 'post', path: '/', tags: ['Notify'], summary: 'Enviar una notificación individual o encolarla si no hay capacidad',
+  method: 'post', path: '/', tags: ['Notify'], summary: 'Enviar un evento o notificación individual; la encola si no hay capacidad',
   security: [{ ApiKeyAuth: [] }],
   request: {
     headers: z.object({ 'idempotency-key': z.string().min(1).max(128).optional() }),
-    body: { ...jsonContent(notifySchema), required: true },
+    body: { ...jsonContent(notifyRequestSchema), required: true },
   },
   responses: {
     200: { ...jsonContent(z.object({ ok: z.literal(true), sent: z.literal(1), ticketId: z.string(), job: jobSchema })), description: 'Expo aceptó el mensaje durante esta petición' },

@@ -56,6 +56,59 @@ npm run api-key:revoke -- <id>
 
 Las claves son credenciales de servidor con acceso a los dispositivos. No deben distribuirse en una aplicación móvil pública.
 
+### Event Envelope
+
+`POST /v1/notify` acepta un **Event Envelope** propio de Civitas o el contrato plano anterior. En el envelope, el sobre identifica el evento y `notification` contiene solo los datos de entrega:
+
+```json
+{
+  "id": "evt_01J9Z8K4M2",
+  "type": "visit.entry",
+  "version": 1,
+  "occurredAt": "2026-11-05T14:32:00-06:00",
+  "source": "civitas.access.visits",
+  "data": {
+    "visitId": "VIS-0001",
+    "status": "inside",
+    "visitor": "Juan Pérez",
+    "propertyLabel": "Casa 4",
+    "propertyId": 456,
+    "residenceId": "2"
+  },
+  "notification": {
+    "deviceId": "device-123",
+    "token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
+    "title": "Entrada registrada",
+    "message": "Juan Pérez ingresó a tu propiedad",
+    "screen": "VisitStatus",
+    "priority": "high",
+    "saveDevice": false
+  }
+}
+```
+
+| Campo | Uso |
+| --- | --- |
+| `id` | Identificador único del evento. Si no se envía `Idempotency-Key`, se usa como clave de idempotencia. |
+| `type` | Tipo de evento. Determina la pantalla si `notification.screen` no se envía. |
+| `version` | Versión del contrato del evento. Por defecto `1`. |
+| `occurredAt` | Fecha/hora ISO del evento. |
+| `source` | Emisor lógico del evento (servicio o módulo). |
+| `data` | Carga del evento. Se aplana en `data` del push. |
+| `notification` | Destinatario, textos, pantalla y opciones de entrega (los mismos campos de la notificación individual). |
+
+El backend agrega `data.event = { id, type, version, occurredAt, source }`, conserva los campos planos de `data` para la app y valida el límite de 4096 bytes del mensaje Expo. Las integraciones existentes pueden seguir enviando el formato plano sin cambios.
+
+| `type` | Pantalla resultante |
+| --- | --- |
+| `visit.created`, `visit.registered`, `visit.entry`, `visit.exit` | `VisitStatus` |
+| `panic`, `panic.triggered` | `SecurityDashboard` |
+| `announcement.generic`, `announcement.published` | `Announcements` |
+| `notification.generic` | `None` (el tap no cambia de pantalla) |
+| Sin `screen` ni `type` conocido | `Splash` |
+
+Para un aviso sin navegación usa `notification.generic` o `screen: "None"`. Para un anuncio que abre la pantalla de anuncios usa `announcement.generic` o `screen: "Announcements"`; incluye `announcementId`, `category` y `publishedAt` en `data` si quieres mostrarlos.
+
 ### Notificación individual inmediata
 
 ```http
@@ -87,11 +140,11 @@ Idempotency-Key: visita-123-aviso-1
 
 La respuesta exitosa es `200` con `sent: 1`, `ticketId` y `job` en estado `awaiting_receipt`. Si no hay capacidad local, responde `202` con `sent: 0` y `job.id`. Un `429` de Expo o un ticket `MessageRateExceeded` también difiere el mismo trabajo y respeta el periodo de espera. Otros fallos de Expo devuelven `502`; un envío sin resultado confirmado queda fallido. `GET /v1/notify/{id}` permite consultar sus recibos.
 
-También admite `url`, `channelId`, `sound` e `interruptionLevel`. El campo `screen` toma `Splash` si se omite, salvo para eventos de visita: `visit_created`, `visit_registered`, `visit_entry` y `visit_exit` abren `VisitStatus`; `panic` abre `SecurityDashboard`. El cuerpo HTTP individual está limitado a 16 KiB y el mensaje serializado para Expo a 4096 bytes, incluyendo datos adicionales. Expo o el proveedor pueden rechazar un mensaje por sus propios límites de codificación.
+También admite `url`, `channelId`, `sound` e `interruptionLevel`. El campo `screen` toma `Splash` si se omite, salvo que el tipo resuelva otra pantalla: `visit_created`, `visit_registered`, `visit_entry` y `visit_exit` abren `VisitStatus`; `panic` abre `SecurityDashboard`; `notification.generic` resuelve `None`; `announcement.generic` abre `Announcements`. El cuerpo HTTP individual está limitado a 16 KiB y el mensaje serializado para Expo a 4096 bytes, incluyendo datos adicionales. Expo o el proveedor pueden rechazar un mensaje por sus propios límites de codificación.
 
 ### Sonido de emergencia para pánico
 
-Los eventos con `data.type: "panic"` usan por defecto `sound: "panic.wav"`, `channelId: "panic_alarm"`, `interruptionLevel: "time-sensitive"` y `priority: "high"`. Estos valores se pueden sobrescribir explícitamente en la solicitud.
+Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por defecto `sound: "panic.wav"`, `channelId: "panic_alarm"`, `interruptionLevel: "time-sensitive"` y `priority: "high"`. Estos valores se pueden sobrescribir explícitamente en la solicitud.
 
 - **Android 8+**: el sonido lo define el canal. La app debe crear el canal `panic_alarm` con el sonido e importancia máxima antes de recibir el aviso. Si el canal no existe, Android no muestra la notificación. Los canales son inmutables: si ya existe un canal con otro sonido, hay que usar un identificador nuevo.
 - **iOS**: `sound` debe incluir la extensión (`.wav`, `.caf` o `.aiff`), durar menos de 30 segundos y estar empaquetado en la app. `time-sensitive` interrumpe Focus pero no requiere la aprobación de Apple que exigen las alertas críticas; sí requiere habilitar la capacidad *Time Sensitive Notifications* en el proyecto iOS.
@@ -192,6 +245,15 @@ El formulario de notificación incluye plantillas **Visita creada**, **Entrada**
 - Una prueba de `visit_entry` sin `screen` para validar la resolución automática a `VisitStatus`.
 - Un aviso sin `data`/`screen` para validar el destino `Splash` por defecto.
 - El formato legado que abre `AccessPass`.
+
+La carpeta **Notify → Event Envelope** incluye los cuatro ejemplos nuevos:
+
+- `Event Envelope · Entrada de visita`: `visit.entry` abre `VisitStatus`.
+- `Event Envelope · Salida de visita`: `visit.exit` abre `VisitStatus`.
+- `Event Envelope · Notificación genérica (sin pantalla)`: `notification.generic` con `screen: "None"`; el tap no navega.
+- `Event Envelope · Anuncio genérico (abre Announcements)`: `announcement.generic` abre la pantalla `Announcements` con `announcementId`, categoría y fecha.
+
+Cada request usa `id` dinámico, actualiza `occurredAt` automáticamente y guarda `jobId` para consultar el estado.
 
 La carpeta **Lotes** incluye un lote con datos de visita (`Crear lote de visita (entrada)`) además del aviso general.
 
