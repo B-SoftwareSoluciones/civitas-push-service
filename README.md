@@ -162,7 +162,7 @@ Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por d
 
 `saveDevice` es opcional y por defecto `false`: el push se envía sin guardar ni actualizar el dispositivo. Con `true` se hace upsert en `devices` y se reactiva el token si estaba retirado, igual que `POST /v1/devices`. Los lotes conservan su comportamiento actual y guardan sus dispositivos.
 
-`Idempotency-Key` es opcional, de 1 a 128 caracteres. Reutilizarla con el mismo contenido y la misma API key devuelve el resultado registrado sin reenviar; si el envío está en curso devuelve `409 notification_in_progress`; con otro contenido devuelve `409`. Usa el mismo valor al reintentar una solicitud cuyo resultado HTTP sea incierto. La deduplicación dura mientras se conserva el trabajo.
+`Idempotency-Key` es opcional, de 1 a 128 caracteres. Reutilizarla con el mismo contenido y la misma API key devuelve el resultado registrado sin reenviar; si el envío está en curso devuelve `409 notification-in-progress`; con otro contenido devuelve `409`. Usa el mismo valor al reintentar una solicitud cuyo resultado HTTP sea incierto. La deduplicación dura mientras se conserva el trabajo.
 
 | Código | Significado |
 | --- | --- |
@@ -174,6 +174,37 @@ Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por d
 | `413` | Cuerpo HTTP demasiado grande |
 | `502` | Error en el envío inmediato a Expo |
 | `503` | Cola llena; reintentar después del intervalo indicado |
+
+#### Errores (RFC 9457)
+
+Toda respuesta de error usa `Content-Type: application/problem+json` con los campos `type`, `title`, `status`, `detail` e `instance`. `type` es una URI relativa estable (`/problems/<codigo>`); los errores genéricos usan `about:blank`. Los errores de validación añaden `errors`, una lista de `{ detail, pointer }` donde `pointer` es un JSON Pointer (`#/data/propertyId`).
+
+```json
+{
+  "type": "/problems/invalid-body",
+  "title": "Cuerpo de la solicitud inválido",
+  "status": 400,
+  "detail": "El cuerpo de la solicitud no cumple el esquema esperado.",
+  "instance": "/v1/notify",
+  "errors": [
+    { "detail": "Number must be greater than or equal to 1", "pointer": "#/version" },
+    { "detail": "Expected number, received string", "pointer": "#/data/propertyId" }
+  ]
+}
+```
+
+| `type` | Estado |
+| --- | --- |
+| `/problems/invalid-body`, `invalid-query`, `invalid-param`, `invalid-header`, `invalid-idempotency-key`, `invalid-expo-token`, `payload-too-large`, `device-not-registered` | `400` |
+| `/problems/unauthorized`, `api-key-disabled` | `401` (con `WWW-Authenticate: Bearer` en `/v1`) |
+| `/problems/ip-not-allowed`, `forbidden-origin` | `403` |
+| `/problems/not-found`, `route-not-found` | `404` |
+| `/problems/idempotency-conflict`, `notification-in-progress`, `job-not-retryable`, `immediate-job-not-retryable`, `job-expired` | `409` |
+| `/problems/body-too-large` | `413` |
+| `/problems/send-outcome-unknown`, `push-provider-error` (el error de Expo va en `detail`) | `502` |
+| `/problems/queue-full` | `503` (con `Retry-After`) |
+
+Las respuestas exitosas conservan su forma actual.
 
 ### Lotes persistentes
 

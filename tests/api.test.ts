@@ -180,7 +180,7 @@ test('invalid token and oversized payload leave no device or job', async () => {
   assert.equal(db.prepare("SELECT id FROM devices WHERE id = 'invalid'").get(), undefined);
   const large = await send({ ...input, message: '😀'.repeat(1500) }, firstKey, 'large');
   assert.equal(large.status, 400);
-  assert.equal(z.object({ error: z.string() }).parse(await large.json()).error, 'payload_too_large');
+  assert.equal((await problemOf(large, 400)).type, '/problems/payload-too-large');
   assert.equal((await send({ ...input, data: { oversized: 'x'.repeat(20_000) } }, firstKey, 'huge')).status, 413);
 });
 
@@ -284,4 +284,47 @@ test('malformed JSON on notify is a problem details 400, not plain text', async 
     method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': firstKey }, body: '{not json',
   });
   await problemOf(response, 400);
+});
+
+const exitEnvelope = {
+  id: 'evt-problem-exit', type: 'visit.exit', version: 1, occurredAt: '2026-11-11T09:26:01.000', source: 'civitas.access.visits',
+  data: { visitId: 'V-1', status: 'outside', visitor: 'JOSE', propertyLabel: 'E1', propertyId: 238, residenceId: '905164' },
+  notification: { deviceId: 'problem-device', token: 'ExponentPushToken[problem-token]', title: 'Salida', message: 'Salió', screen: 'VisitStatus', priority: 'high', saveDevice: false },
+};
+
+test('invalid envelope reports only the failing fields of the closest union branch', async () => {
+  const response = await send({ ...exitEnvelope, version: 0, data: { ...exitEnvelope.data, propertyId: '238' } }, firstKey, 'problem-invalid-envelope');
+  const body = await problemOf(response, 400);
+  assert.equal(body.type, '/problems/invalid-body');
+  assert.deepEqual(body.errors?.map((issue) => issue.pointer).sort(), ['#/data/propertyId', '#/version']);
+});
+
+test('the corrected envelope is accepted', async (context) => {
+  context.mock.method(globalThis, 'fetch', async () => Response.json({ data: [{ status: 'ok', id: 'problem-ticket' }] }));
+  db.prepare('UPDATE push_worker SET next_send_at = 0').run();
+  assert.equal((await send(exitEnvelope, firstKey, 'problem-valid-envelope')).status, 200);
+});
+
+test('query, path, idempotency and token errors use their own problem types', async (context) => {
+  assert.equal((await problemOf(await app.request('/v1/batches?limit=abc', { headers: { 'x-api-key': firstKey } }), 400)).type, '/problems/invalid-query');
+  assert.equal((await problemOf(await app.request('/v1/batches/' + crypto.randomUUID(), { headers: { 'x-api-key': firstKey } }), 404)).type, '/problems/not-found');
+  assert.equal((await problemOf(await app.request('/v1/batches/no-es-uuid', { headers: { 'x-api-key': firstKey } }), 400)).type, '/problems/invalid-param');
+  assert.equal((await problemOf(await send({ ...input, deviceId: 'problem-bad', token: 'bad' }, firstKey, 'problem-bad-token'), 400)).type, '/problems/invalid-expo-token');
+  context.mock.method(globalThis, 'fetch', async () => Response.json({ data: [{ status: 'ok', id: 'conflict-ticket' }] }));
+  db.prepare('UPDATE push_worker SET next_send_at = 0').run();
+  assert.equal((await send({ ...input, deviceId: 'problem-conflict' }, firstKey, 'problem-conflict-key')).status, 200);
+  const conflict = await send({ ...input, deviceId: 'problem-conflict', message: 'otro contenido' }, firstKey, 'problem-conflict-key');
+  assert.equal((await problemOf(conflict, 409)).type, '/problems/idempotency-conflict');
+});
+
+test('devices validation and OpenAPI declare problem details', async () => {
+  const invalid = await app.request('/v1/devices', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': firstKey }, body: JSON.stringify({ deviceId: '' }),
+  });
+  const body = await problemOf(invalid, 400);
+  assert.equal(body.type, '/problems/invalid-body');
+  assert.ok((body.errors?.length ?? 0) > 0);
+  const doc = z.object({ paths: z.record(z.object({ post: z.object({ responses: z.record(z.object({ content: z.record(z.unknown()) }).passthrough()) }).optional() }).passthrough()) })
+    .parse(await (await app.request('/doc', { headers: { cookie: `${SESSION_COOKIE}=${createSessionValue()}` } })).json());
+  assert.ok(doc.paths['/v1/notify']?.post?.responses['400']?.content['application/problem+json']);
 });
