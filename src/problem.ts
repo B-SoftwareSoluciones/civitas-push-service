@@ -82,10 +82,16 @@ export function problem(
   return c.body(JSON.stringify(body), status, { ...options.headers, 'Content-Type': PROBLEM_CONTENT_TYPE });
 }
 
+const depthOf = (error: ZodError) => Math.max(0, ...error.issues.map((issue) => issue.path.length));
+
 function closestIssues(error: ZodError): ZodIssue[] {
   return error.issues.flatMap((issue) => {
     if (issue.code !== 'invalid_union' || issue.unionErrors.length === 0) return [issue];
-    const closest = issue.unionErrors.reduce((best, current) => (current.issues.length < best.issues.length ? current : best));
+    // The branch whose errors sit deepest matched the most of the input; ties go to the one with fewer errors.
+    const closest = issue.unionErrors.reduce((best, current) => {
+      const [currentDepth, bestDepth] = [depthOf(current), depthOf(best)];
+      return currentDepth > bestDepth || (currentDepth === bestDepth && current.issues.length < best.issues.length) ? current : best;
+    });
     return closestIssues(closest);
   });
 }

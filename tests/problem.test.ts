@@ -102,3 +102,15 @@ test('problemErrorHandler turns HTTPException into about:blank problem details',
   assert.ok(response.headers.get('content-type')?.startsWith('application/problem+json'));
   assert.equal((await body(response)).type, 'about:blank');
 });
+
+test('zodProblemErrors prefers the union branch that matched deeper into the input', () => {
+  const recipient = { deviceId: z.string(), token: z.string(), message: z.string() };
+  const envelopeLike = z.object({ version: z.number().min(1), notification: z.object(recipient) });
+  const flatLike = z.object(recipient);
+  const result = z.union([envelopeLike, flatLike]).safeParse({ version: 0, notification: { device: 'a', expoToken: 'b', body: 'c' } });
+  assert.equal(result.success, false);
+  assert.deepEqual(
+    zodProblemErrors(result.error!).map((issue) => issue.pointer).sort(),
+    ['#/notification/deviceId', '#/notification/message', '#/notification/token', '#/version'],
+  );
+});
