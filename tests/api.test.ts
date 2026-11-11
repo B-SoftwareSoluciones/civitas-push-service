@@ -328,3 +328,16 @@ test('devices validation and OpenAPI declare problem details', async () => {
     .parse(await (await app.request('/doc', { headers: { cookie: `${SESSION_COOKIE}=${createSessionValue()}` } })).json());
   assert.ok(doc.paths['/v1/notify']?.post?.responses['400']?.content['application/problem+json']);
 });
+
+test('dashboard API errors are problem details with field pointers', async () => {
+  const cookie = `${SESSION_COOKIE}=${createSessionValue()}`;
+  const json = { cookie, 'content-type': 'application/json' };
+  const notify = await problemOf(await app.request('/api/notify', { method: 'POST', headers: json, body: '{}' }), 400);
+  assert.equal(notify.type, '/problems/invalid-body');
+  assert.ok((notify.errors?.length ?? 0) > 0);
+  assert.equal((await problemOf(await app.request('/api/keys', { method: 'POST', headers: json, body: 'null' }), 400)).type, '/problems/invalid-body');
+  assert.equal((await problemOf(await app.request('/api/batches?limit=abc', { headers: { cookie } }), 400)).type, '/problems/invalid-query');
+  assert.equal((await problemOf(await app.request('/api/jobs/' + crypto.randomUUID(), { headers: { cookie } }), 404)).type, '/problems/not-found');
+  assert.equal((await problemOf(await app.request('/api/keys/inexistente', { method: 'PATCH', headers: json, body: '{}' }), 404)).type, '/problems/not-found');
+  assert.equal((await problemOf(await app.request('/api/jobs/' + crypto.randomUUID() + '/retry', { method: 'POST', headers: { cookie } }), 409)).type, '/problems/job-not-retryable');
+});

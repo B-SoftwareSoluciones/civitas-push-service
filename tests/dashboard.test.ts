@@ -82,3 +82,23 @@ test('batch screen loads progress, opens recipient details, paginates and refres
   await flush();
   assert.equal(elements.get('batch-progress')?.value, 100);
 });
+
+test('dashboard reads problem details instead of the legacy error field', () => {
+  const html = dashboardPage('admin');
+  assert.ok(html.includes('__problemText'));
+  assert.equal(html.includes('out.data.error'), false);
+  assert.equal(html.includes('result.error'), false);
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]!);
+  const source = scripts.find((script) => script.includes('window.__problemText ='));
+  assert.ok(source, 'problem text helper script');
+  const window: { __problemText?: (body: object) => string } = {};
+  new Script(source).runInContext(createContext({ window }));
+  const text = window.__problemText!;
+  assert.equal(text({ detail: 'X', title: 'T' }), 'X');
+  assert.equal(text({ title: 'T' }), 'T');
+  assert.equal(text({}), 'desconocido');
+  const errors = Array.from({ length: 5 }, (_, index) => ({ detail: 'd' + index, pointer: '#/p' + index }));
+  const withErrors = text({ detail: 'X', errors });
+  assert.ok(withErrors.includes('#/p0') && withErrors.includes('#/p2'));
+  assert.equal(withErrors.includes('#/p3'), false);
+});

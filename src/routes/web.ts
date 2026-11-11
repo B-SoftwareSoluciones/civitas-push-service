@@ -24,7 +24,8 @@ import { pageSchema } from '../services/batches';
 import { dashboardPage } from '../web/dashboard';
 import { loginPage } from '../web/login';
 import { queue } from '../queue/runtime';
-import { publicJob, QueueError } from '../queue/store';
+import { publicJob } from '../queue/store';
+import { ProblemError, zodProblemErrors } from '../problem';
 
 export const webRoutes = new Hono();
 
@@ -120,20 +121,10 @@ webRoutes.get('/api/devices', (c) => {
 
 webRoutes.post('/api/notify', async (c) => {
   const parsed = notifySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ ok: false, error: 'invalid_body', sent: 0, details: parsed.error.flatten() }, 400);
-  }
+  if (!parsed.success) throw new ProblemError(400, 'invalid_body', { errors: zodProblemErrors(parsed.error) });
 
-  try {
-    const result = await runNotify(parsed.data, 'admin', c.req.header('idempotency-key'));
-    return c.json(result, result.sent === 0 ? 202 : 200);
-  } catch (error) {
-    if (error instanceof QueueError) {
-      if (error.status === 503) c.header('Retry-After', String(Math.max(1, Math.ceil((error.retryAfterMs || 60_000) / 1000))));
-      return c.json({ ok: false, error: error.code }, error.status);
-    }
-    throw error;
-  }
+  const result = await runNotify(parsed.data, 'admin', c.req.header('idempotency-key'));
+  return c.json(result, result.sent === 0 ? 202 : 200);
 });
 
 webRoutes.get('/api/jobs', (c) => c.json({
@@ -142,31 +133,27 @@ webRoutes.get('/api/jobs', (c) => c.json({
 
 webRoutes.get('/api/batches', (c) => {
   const page = pageSchema.safeParse(c.req.query());
-  if (!page.success) return c.json({ ok: false, error: 'invalid_query' }, 400);
+  if (!page.success) throw new ProblemError(400, 'invalid_query', { errors: zodProblemErrors(page.error) });
   const { limit, offset } = page.data;
   return c.json({ ok: true, batches: queue.batches(undefined, limit, offset), ...page.data, ...queue.health() });
 });
 
 webRoutes.get('/api/batches/:id', (c) => {
   const batch = queue.batch(c.req.param('id'));
-  if (!batch) return c.json({ ok: false, error: 'not_found' }, 404);
+  if (!batch) throw new ProblemError(404, 'not_found');
   const page = pageSchema.safeParse(c.req.query());
-  if (!page.success) return c.json({ ok: false, error: 'invalid_query' }, 400);
+  if (!page.success) throw new ProblemError(400, 'invalid_query', { errors: zodProblemErrors(page.error) });
   return c.json({ ok: true, batch, jobs: queue.batchJobs(batch.id, page.data.limit, page.data.offset).map(publicJob), ...page.data });
 });
 
 webRoutes.get('/api/jobs/:id', (c) => {
   const job = queue.get(c.req.param('id'));
-  return job ? c.json({ ok: true, job: publicJob(job) }) : c.json({ ok: false, error: 'not_found' }, 404);
+  if (!job) throw new ProblemError(404, 'not_found');
+  return c.json({ ok: true, job: publicJob(job) });
 });
 
 webRoutes.post('/api/jobs/:id/retry', (c) => {
-  try {
-    return c.json({ ok: true, job: publicJob(queue.retry(c.req.param('id'))) }, 202);
-  } catch (error) {
-    if (error instanceof QueueError) return c.json({ ok: false, error: error.code }, error.status);
-    throw error;
-  }
+  return c.json({ ok: true, job: publicJob(queue.retry(c.req.param('id'))) }, 202);
 });
 
 webRoutes.get('/api/keys', (c) => {
@@ -176,7 +163,7 @@ webRoutes.get('/api/keys', (c) => {
 
 webRoutes.post('/api/keys', async (c) => {
   const parsed = createKeySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ ok: false, error: 'invalid_body' }, 400);
+  if (!parsed.success) throw new ProblemError(400, 'invalid_body', { errors: zodProblemErrors(parsed.error) });
   const { name, allowedIps } = parsed.data;
 
   const { key, prefix, keyHash } = generateApiKey();
@@ -193,10 +180,10 @@ webRoutes.post('/api/keys', async (c) => {
 webRoutes.patch('/api/keys/:id', async (c) => {
   const id = c.req.param('id');
   const existing = getApiKey(id);
-  if (!existing) return c.json({ ok: false, error: 'not_found' }, 404);
+  if (!existing) throw new ProblemError(404, 'not_found');
 
   const parsed = updateKeySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ ok: false, error: 'invalid_body' }, 400);
+  if (!parsed.success) throw new ProblemError(400, 'invalid_body', { errors: zodProblemErrors(parsed.error) });
   const body = parsed.data;
 
   if (typeof body.enabled === 'boolean') {
@@ -211,7 +198,7 @@ webRoutes.patch('/api/keys/:id', async (c) => {
 
 webRoutes.delete('/api/keys/:id', (c) => {
   const id = c.req.param('id');
-  if (!getApiKey(id)) return c.json({ ok: false, error: 'not_found' }, 404);
+  if (!getApiKey(id)) throw new ProblemError(404, 'not_found');
   deleteApiKey(id);
   return c.json({ ok: true });
 });

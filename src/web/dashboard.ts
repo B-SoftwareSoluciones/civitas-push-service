@@ -4,6 +4,7 @@ import {
   appShell,
   baseCss,
   shellCss,
+  problemTextScript,
   shellScript,
   themeInitScript,
   themeToggleScript,
@@ -284,9 +285,9 @@ function dashboardScript(): string {
                 if (!confirm('Reintentar esta solicitud puede duplicar un aviso si el resultado anterior fue incierto. ¿Continuar?')) return;
                 retry.disabled = true;
                 fetch('/api/jobs/' + job.id + '/retry', { method: 'POST' })
-                  .then(function (res) { return res.json(); })
-                  .then(function (result) {
-                    if (!result.ok) show('err', result.error);
+                  .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+                  .then(function (out) {
+                    if (!out.ok) show('err', window.__problemText(out.body));
                     loadJobs();
                   }).catch(function () { show('err', 'No se pudo reintentar'); })
                   .finally(function () { retry.disabled = false; });
@@ -387,7 +388,7 @@ function dashboardScript(): string {
             return res.json().then(function (data) { return { ok: res.ok, data: data }; });
           })
           .then(function (out) {
-            if (out.ok && out.data.ok) {
+            if (out.ok) {
               show('ok', out.data.sent === 0
                 ? 'Sin capacidad inmediata. Notificación en cola: ' + out.data.job.id
                 : 'Expo aceptó la notificación. Ticket: ' + out.data.ticketId);
@@ -395,7 +396,7 @@ function dashboardScript(): string {
               loadJobs();
               loadDevices();
             } else {
-              show('err', 'Error: ' + (out.data.error || 'desconocido'));
+              show('err', 'Error: ' + window.__problemText(out.data));
             }
           })
           .catch(function () {
@@ -430,6 +431,7 @@ export function dashboardPage(user: string): string {
     user,
     content: [notifyPanel(), batchesPanel(), devicesPanel(), apiKeysPanel()].join('\n'),
   })}
+  ${problemTextScript()}
   ${dashboardScript()}
   ${batchesScript()}
   ${apiKeysScript()}
