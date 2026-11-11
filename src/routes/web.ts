@@ -25,7 +25,7 @@ import { dashboardPage } from '../web/dashboard';
 import { loginPage } from '../web/login';
 import { queue } from '../queue/runtime';
 import { publicJob } from '../queue/store';
-import { ProblemError, zodProblemErrors } from '../problem';
+import { ProblemError, failureProblem, zodProblemErrors } from '../problem';
 
 export const webRoutes = new Hono();
 
@@ -124,7 +124,8 @@ webRoutes.post('/api/notify', async (c) => {
   if (!parsed.success) throw new ProblemError(400, 'invalid_body', { errors: zodProblemErrors(parsed.error) });
 
   const result = await runNotify(parsed.data, 'admin', c.req.header('idempotency-key'));
-  return c.json(result, result.sent === 0 ? 202 : 200);
+  if (!result.ok) return failureProblem(c, result.error);
+  return c.json({ ok: true as const, ...result.value }, result.value.sent === 0 ? 202 : 200);
 });
 
 webRoutes.get('/api/jobs', (c) => c.json({

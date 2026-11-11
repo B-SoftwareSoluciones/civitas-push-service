@@ -288,12 +288,12 @@ test('malformed JSON on notify is a problem details 400, not plain text', async 
 
 const exitEnvelope = {
   id: 'evt-problem-exit', type: 'visit.exit', version: 1, occurredAt: '2026-11-11T09:26:01.000', source: 'civitas.access.visits',
-  data: { visitId: 'V-1', status: 'outside', visitor: 'JOSE', propertyLabel: 'E1', propertyId: 238, residenceId: '905164' },
+  data: { visitId: 'V-1', status: 'outside', visitor: 'JOSE', propertyLabel: 'E1', propertyId: '238', residenceId: '905164' },
   notification: { deviceId: 'problem-device', token: 'ExponentPushToken[problem-token]', title: 'Salida', message: 'Salió', screen: 'VisitStatus', priority: 'high', saveDevice: false },
 };
 
 test('invalid envelope reports only the failing fields of the closest union branch', async () => {
-  const response = await send({ ...exitEnvelope, version: 0, data: { ...exitEnvelope.data, propertyId: '238' } }, firstKey, 'problem-invalid-envelope');
+  const response = await send({ ...exitEnvelope, version: 0, data: { ...exitEnvelope.data, propertyId: 238 } }, firstKey, 'problem-invalid-envelope');
   const body = await problemOf(response, 400);
   assert.equal(body.type, '/problems/invalid-body');
   assert.deepEqual(body.errors?.map((issue) => issue.pointer).sort(), ['#/data/propertyId', '#/version']);

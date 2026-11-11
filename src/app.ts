@@ -16,6 +16,7 @@ import { notifyRoutes } from './routes/notify';
 import { webRoutes } from './routes/web';
 import { queue } from './queue/runtime';
 import { batchesRoutes } from './routes/batches';
+import { openApiTags } from './docs/notifications';
 
 export const app = new OpenAPIHono();
 
@@ -60,14 +61,18 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'ApiKeyAuth', {
   description: 'También se acepta `Authorization: Bearer <api-key>`.',
 });
 
-app.doc('/doc', {
+export const openApiConfig = {
   openapi: '3.0.0',
   info: {
     title: 'Civitas Access API',
     version: '1.0.0',
     description:
-      'API de registro de dispositivos y envío de notificaciones push (Expo). Todas las rutas /v1 requieren una API key.',
+      'API de registro de dispositivos y envío de notificaciones push (Expo). Todas las rutas /v1 requieren una API key. ' +
+      'Los errores usan RFC 9457 (`application/problem+json`). `propertyId` y `residenceId` son siempre cadenas.',
   },
-});
+  tags: openApiTags,
+};
+
+app.doc('/doc', openApiConfig);
 
 app.get('/ui', swaggerUI({ url: '/doc' }));

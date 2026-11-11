@@ -56,6 +56,8 @@ npm run api-key:revoke -- <id>
 
 Las claves son credenciales de servidor con acceso a los dispositivos. No deben distribuirse en una aplicación móvil pública.
 
+> **Identificadores:** `data.propertyId` y `data.residenceId` son **cadenas** (máx. 128 caracteres). Enviar un número en `propertyId` responde `400` con el puntero `#/data/propertyId`.
+
 ### Event Envelope
 
 `POST /v1/notify` acepta un **Event Envelope** propio de Civitas o el contrato plano anterior. En el envelope, el sobre identifica el evento y `notification` contiene solo los datos de entrega:
@@ -72,7 +74,7 @@ Las claves son credenciales de servidor con acceso a los dispositivos. No deben 
     "status": "inside",
     "visitor": "Juan Pérez",
     "propertyLabel": "Casa 4",
-    "propertyId": 456,
+    "propertyId": "456",
     "residenceId": "2"
   },
   "notification": {
@@ -130,7 +132,7 @@ Idempotency-Key: visita-123-aviso-1
     "visitor": "Juan Pérez",
     "propertyLabel": "Casa 4",
     "occurredAt": "2026-10-27T14:32:00-06:00",
-    "propertyId": 456,
+    "propertyId": "456",
     "residenceId": "2"
   },
   "priority": "high",
@@ -188,7 +190,7 @@ Toda respuesta de error usa `Content-Type: application/problem+json` con los cam
   "instance": "/v1/notify",
   "errors": [
     { "detail": "Number must be greater than or equal to 1", "pointer": "#/version" },
-    { "detail": "Expected number, received string", "pointer": "#/data/propertyId" }
+    { "detail": "Expected string, received number", "pointer": "#/data/propertyId" }
   ]
 }
 ```
@@ -218,7 +220,7 @@ Las respuestas exitosas conservan su forma actual.
   "data": { "screen": "Home" },
   "devices": [
     { "deviceId": "device-1", "token": "ExponentPushToken[uno]" },
-    { "deviceId": "device-2", "token": "ExponentPushToken[dos]", "data": { "propertyId": 456 } }
+    { "deviceId": "device-2", "token": "ExponentPushToken[dos]", "data": { "propertyId": "456" } }
   ]
 }
 ```
@@ -258,6 +260,14 @@ Un lote ajeno devuelve `404`. El panel administrativo puede consultar todos los 
 - `/doc` y `/ui`: OpenAPI y Swagger, con sesión administrativa.
 
 Un error `DeviceNotRegistered` retira el token, deshabilita sus dispositivos y termina trabajos pendientes para ese token. Un nuevo registro explícito del dispositivo permite volver a utilizarlo. Enviar una notificación no borra la plataforma ni simula una conexión del dispositivo.
+
+## Documentación Swagger
+
+`/ui` (Swagger UI) y `/doc` (OpenAPI 3) requieren sesión del panel. Cada caso de uso de notificaciones tiene su propio ejemplo de petición: visita creada, registrada, entrada y salida, pánico, anuncio, notificación genérica, formato plano y los tres lotes (pánico, anuncio y visita). Cada operación documenta además sus respuestas de éxito y todos los problem details posibles con ejemplos. Los ejemplos se validan contra los esquemas reales en `tests/openapi.test.ts`, así que no se desfasan.
+
+## Arquitectura de errores (Result Pattern)
+
+Los servicios (`buildMessage`, `validateIdempotency`, `runNotify`, `runBatch`) no lanzan errores esperados: devuelven `Result<T>` (`src/result.ts`), que es `{ ok: true, value }` o `{ ok: false, error: { code, status, retryAfterMs } }`. `attempt()` convierte los `QueueError` del almacén de la cola en `Result`; cualquier otro error (un bug) sigue propagándose y termina en `500`. Las rutas traducen el fallo con `failureProblem()` a `application/problem+json`, igual que antes (incluido `Retry-After` en `503`). La validación de entrada sigue siendo Zod (`@hono/zod-openapi`) en el borde HTTP.
 
 ## Panel
 

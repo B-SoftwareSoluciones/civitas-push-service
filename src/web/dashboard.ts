@@ -91,7 +91,7 @@ function notifyPanel(): string {
                     <input id="visitId" placeholder="VIS-0001" />
                   </label>
                   <label>Property ID <span class="muted small">(opcional)</span>
-                    <input id="propertyId" type="number" placeholder="456" />
+                    <input id="propertyId" placeholder="456" />
                   </label>
                 </div>
                 <div class="row">
@@ -232,7 +232,7 @@ function dashboardScript(): string {
         if (visitor) data.visitor = visitor;
         if (propertyLabel) data.propertyLabel = propertyLabel;
         if (occurredAt) data.occurredAt = occurredAt;
-        if (propertyId) data.propertyId = Number(propertyId);
+        if (propertyId) data.propertyId = propertyId;
         if (residenceId) data.residenceId = residenceId;
         if (Object.keys(data).length) payload.data = data;
 

@@ -2,7 +2,8 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { batchSchema, pageSchema, runBatch } from '../services/batches';
 import { queue } from '../queue/runtime';
 import { publicJob } from '../queue/store';
-import { ProblemError, problemContent, validationHook } from '../problem';
+import { ProblemError, failureProblem, problemContent, problemResponse, validationHook } from '../problem';
+import { batchAcceptedExample, batchDescription, batchRequestExamples } from '../docs/notifications';
 import { jobSchema, jsonContent } from './notify';
 
 const batchResponse = z.object({
@@ -24,19 +25,38 @@ batchesRoutes.use('*', async (c, next) => {
 });
 
 batchesRoutes.openapi(createRoute({
-  method: 'post', path: '/', tags: ['Batches'], summary: 'Encolar un lote de hasta 1000 dispositivos', security,
-  request: { headers: z.object({ 'idempotency-key': z.string().min(1).max(128).optional() }), body: { ...jsonContent(batchSchema), required: true } },
+  method: 'post', path: '/', tags: ['Batches'], summary: 'Encolar un lote de hasta 1000 dispositivos', description: batchDescription, security,
+  request: {
+    headers: z.object({
+      'idempotency-key': z.string().min(1).max(128).optional().openapi({
+        description: 'Clave de idempotencia (1–128 caracteres) para reintentar el lote sin duplicarlo.',
+        example: 'batch-panic-casa-4',
+      }),
+    }),
+    body: { ...jsonContent(batchSchema, batchRequestExamples), required: true },
+  },
   responses: {
-    202: { ...jsonContent(successSchema), description: 'Lote persistido completamente' },
-    400: { ...problemContent, description: 'Lote inválido' },
-    401: { ...problemContent, description: 'API key ausente, inválida o deshabilitada' },
-    409: { ...problemContent, description: 'Conflicto de idempotencia' },
-    503: { ...problemContent, description: 'Cola sin capacidad para el lote completo' },
+    202: { ...jsonContent(successSchema, batchAcceptedExample), description: 'Lote persistido completamente. Incluye `Location` con el recurso del lote.' },
+    400: problemResponse('Lote inválido: esquema, dispositivos duplicados, token de Expo, clave de idempotencia o tamaño', [
+      { code: 'invalid_body', status: 400, instance: '/v1/batches', errors: [{ detail: 'Duplicate device or token', pointer: '#/devices/1' }] },
+      { code: 'invalid_expo_token', status: 400, instance: '/v1/batches' },
+      { code: 'invalid_idempotency_key', status: 400, instance: '/v1/batches' },
+      { code: 'payload_too_large', status: 400, instance: '/v1/batches' },
+      { code: 'device_not_registered', status: 400, instance: '/v1/batches' },
+    ]),
+    401: problemResponse('API key ausente, inválida o deshabilitada', [
+      { code: 'unauthorized', status: 401, instance: '/v1/batches' },
+      { code: 'api_key_disabled', status: 401, instance: '/v1/batches' },
+    ]),
+    409: problemResponse('Clave de idempotencia reutilizada con otro contenido', [{ code: 'idempotency_conflict', status: 409, instance: '/v1/batches' }]),
+    413: problemResponse('Cuerpo mayor a 1 MB', [{ code: 'body_too_large', status: 413, instance: '/v1/batches' }]),
+    503: problemResponse('Cola sin capacidad para el lote completo; respeta `Retry-After`', [{ code: 'queue_full', status: 503, instance: '/v1/batches' }]),
   },
 }), (c) => {
   const result = runBatch(c.req.valid('json'), c.get('apiKey').id, c.req.header('idempotency-key'));
-  c.header('Location', '/v1/batches/' + result.batch.id);
-  return c.json(result, 202);
+  if (!result.ok) return failureProblem(c, result.error) as never;
+  c.header('Location', '/v1/batches/' + result.value.batch.id);
+  return c.json({ ok: true as const, ...result.value }, 202);
 });
 
 batchesRoutes.openapi(createRoute({

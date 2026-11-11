@@ -377,7 +377,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -426,7 +426,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Visita registrada\",\n  \"message\": \"{{visitor}} fue registrado en tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_created\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"pending\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Visita registrada\",\n  \"message\": \"{{visitor}} fue registrado en tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_created\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"pending\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -472,7 +472,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -518,7 +518,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Salida registrada\",\n  \"message\": \"{{visitor}} salió de tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_exit\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"outside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Salida registrada\",\n  \"message\": \"{{visitor}} salió de tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_exit\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"outside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -564,7 +564,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"saveDevice\": true,\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"saveDevice\": true,\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -610,7 +610,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -656,7 +656,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Visita registrada\",\n  \"message\": \"Tienes una visita en la puerta\",\n  \"data\": {\n    \"type\": \"visit_registered\",\n    \"screen\": \"AccessPass\",\n    \"visitId\": \"{{visitId}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  }\n}",
+                  "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"Visita registrada\",\n  \"message\": \"Tienes una visita en la puerta\",\n  \"data\": {\n    \"type\": \"visit_registered\",\n    \"screen\": \"AccessPass\",\n    \"visitId\": \"{{visitId}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -713,7 +713,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.entry\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"inside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Entrada registrada\",\n    \"message\": \"{{visitor}} ingresó a tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.entry\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"inside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Entrada registrada\",\n    \"message\": \"{{visitor}} ingresó a tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -765,7 +765,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.exit\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"outside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Salida registrada\",\n    \"message\": \"{{visitor}} salió de tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
+                  "raw": "{\n  \"id\": \"evt-{{$guid}}\",\n  \"type\": \"visit.exit\",\n  \"version\": 1,\n  \"occurredAt\": \"{{occurredAt}}\",\n  \"source\": \"civitas.access.visits\",\n  \"data\": {\n    \"visitId\": \"{{visitId}}\",\n    \"status\": \"outside\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"notification\": {\n    \"deviceId\": \"{{deviceId}}\",\n    \"token\": \"{{expoToken}}\",\n    \"title\": \"Salida registrada\",\n    \"message\": \"{{visitor}} salió de tu propiedad\",\n    \"screen\": \"VisitStatus\",\n    \"priority\": \"high\",\n    \"saveDevice\": false\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -949,7 +949,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"🚨 PÁNICO\",\n  \"message\": \"Botón de pánico activado en {{propertyLabel}}\",\n  \"sound\": \"{{panicSound}}\",\n  \"channelId\": \"{{panicChannel}}\",\n  \"interruptionLevel\": \"{{interruptionLevel}}\",\n  \"data\": {\n    \"type\": \"panic\",\n    \"residenceId\": \"{{residenceId}}\",\n    \"propertyId\": {{propertyId}},\n    \"screen\": \"SecurityDashboard\"\n  },\n  \"priority\": \"high\"\n}",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"token\": \"{{expoToken}}\",\n  \"title\": \"🚨 PÁNICO\",\n  \"message\": \"Botón de pánico activado en {{propertyLabel}}\",\n  \"sound\": \"{{panicSound}}\",\n  \"channelId\": \"{{panicChannel}}\",\n  \"interruptionLevel\": \"{{interruptionLevel}}\",\n  \"data\": {\n    \"type\": \"panic\",\n    \"residenceId\": \"{{residenceId}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"screen\": \"SecurityDashboard\"\n  },\n  \"priority\": \"high\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1093,7 +1093,7 @@
             "url": "{{baseUrl}}/v1/batches",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Visita entrada {{visitId}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": {{propertyId}},\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\",\n  \"devices\": [\n    {\n      \"deviceId\": \"{{deviceId}}\",\n      \"token\": \"{{expoToken}}\"\n    }\n  ]\n}",
+              "raw": "{\n  \"name\": \"Visita entrada {{visitId}}\",\n  \"title\": \"Entrada registrada\",\n  \"message\": \"{{visitor}} ingresó a tu propiedad\",\n  \"data\": {\n    \"type\": \"visit_entry\",\n    \"screen\": \"VisitStatus\",\n    \"status\": \"inside\",\n    \"visitId\": \"{{visitId}}\",\n    \"visitor\": \"{{visitor}}\",\n    \"propertyLabel\": \"{{propertyLabel}}\",\n    \"occurredAt\": \"{{occurredAt}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"residenceId\": \"{{residenceId}}\"\n  },\n  \"priority\": \"high\",\n  \"devices\": [\n    {\n      \"deviceId\": \"{{deviceId}}\",\n      \"token\": \"{{expoToken}}\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1132,7 +1132,7 @@
             "url": "{{baseUrl}}/v1/batches",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Pánico {{propertyLabel}}\",\n  \"title\": \"🚨 PÁNICO\",\n  \"message\": \"Botón de pánico activado en {{propertyLabel}}\",\n  \"sound\": \"{{panicSound}}\",\n  \"channelId\": \"{{panicChannel}}\",\n  \"interruptionLevel\": \"{{interruptionLevel}}\",\n  \"priority\": \"high\",\n  \"data\": {\n    \"type\": \"panic\",\n    \"residenceId\": \"{{residenceId}}\",\n    \"propertyId\": {{propertyId}},\n    \"screen\": \"SecurityDashboard\"\n  },\n  \"devices\": [\n    {\n      \"deviceId\": \"{{deviceId}}\",\n      \"token\": \"{{expoToken}}\"\n    }\n  ]\n}",
+              "raw": "{\n  \"name\": \"Pánico {{propertyLabel}}\",\n  \"title\": \"🚨 PÁNICO\",\n  \"message\": \"Botón de pánico activado en {{propertyLabel}}\",\n  \"sound\": \"{{panicSound}}\",\n  \"channelId\": \"{{panicChannel}}\",\n  \"interruptionLevel\": \"{{interruptionLevel}}\",\n  \"priority\": \"high\",\n  \"data\": {\n    \"type\": \"panic\",\n    \"residenceId\": \"{{residenceId}}\",\n    \"propertyId\": \"{{propertyId}}\",\n    \"screen\": \"SecurityDashboard\"\n  },\n  \"devices\": [\n    {\n      \"deviceId\": \"{{deviceId}}\",\n      \"token\": \"{{expoToken}}\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

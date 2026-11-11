@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError, ZodIssue } from 'zod';
 
 import { QueueError } from './queue/store';
+import type { Failure } from './result';
 
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json';
 
@@ -111,14 +112,19 @@ export function validationHook(result: { success: boolean; target?: string; erro
   return problem(c, 400, code, { errors: zodProblemErrors(result.error) });
 }
 
+/** Traduce un `Failure` de un `Result` a problem details; es la única vía de traducción para errores de dominio. */
+export function failureProblem(c: Context, failure: Failure): Response {
+  const headers = failure.status === 503
+    ? { 'Retry-After': String(Math.max(1, Math.ceil((failure.retryAfterMs || 60_000) / 1000))) }
+    : undefined;
+  if (failure.code in CATALOG) return problem(c, failure.status, failure.code, { headers });
+  return problem(c, failure.status, 'push_provider_error', { detail: failure.code, headers });
+}
+
 export function problemErrorHandler(error: Error, c: Context): Response {
   if (error instanceof ProblemError) return problem(c, error.status, error.code, error.options);
   if (error instanceof QueueError) {
-    const headers = error.status === 503
-      ? { 'Retry-After': String(Math.max(1, Math.ceil((error.retryAfterMs || 60_000) / 1000))) }
-      : undefined;
-    if (error.code in CATALOG) return problem(c, error.status, error.code, { headers });
-    return problem(c, error.status, 'push_provider_error', { detail: error.code, headers });
+    return failureProblem(c, { code: error.code, status: error.status, retryAfterMs: error.retryAfterMs });
   }
   if (error instanceof HTTPException) return problem(c, error.status, null, { detail: error.message });
   console.error(error);
@@ -139,3 +145,24 @@ export const problemSchema = z
   .openapi('Problem');
 
 export const problemContent = { content: { [PROBLEM_CONTENT_TYPE]: { schema: problemSchema } } };
+
+export type ProblemExampleSpec = { code: string; status: number; instance: string; detail?: string; errors?: ProblemIssue[] };
+
+/** Respuesta OpenAPI con ejemplos construidos desde el catálogo, para que la documentación no se desfase del comportamiento. */
+export function problemResponse(description: string, specs: ProblemExampleSpec[]) {
+  const examples = Object.fromEntries(specs.map((spec) => {
+    const entry = CATALOG[spec.code];
+    return [spec.code, {
+      summary: entry?.title ?? spec.code,
+      value: {
+        type: `/problems/${spec.code.replace(/_/g, '-')}`,
+        title: entry?.title ?? STATUS_TITLES[spec.status] ?? 'Error',
+        status: spec.status,
+        detail: spec.detail ?? entry?.detail,
+        instance: spec.instance,
+        ...(spec.errors?.length ? { errors: spec.errors } : {}),
+      },
+    }];
+  }));
+  return { description, content: { [PROBLEM_CONTENT_TYPE]: { schema: problemSchema, examples } } };
+}
