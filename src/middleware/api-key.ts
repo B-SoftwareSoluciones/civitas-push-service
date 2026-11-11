@@ -3,7 +3,9 @@ import type { Context, Next } from 'hono';
 import { findApiKeyByHash, touchApiKey, type ApiKeyRow } from '../db/api-keys';
 import { hashApiKey, matchIpAllowlist, safeEqualHex } from '../services/api-keys';
 import { clientIp } from '../services/client-ip';
+import { problem } from '../problem';
 
+const CHALLENGE = { 'WWW-Authenticate': 'Bearer realm="civitas-access"' };
 const TOUCH_INTERVAL_MS = 60_000;
 const lastTouch = new Map<string, number>();
 
@@ -33,20 +35,20 @@ function markUsed(row: ApiKeyRow): void {
 
 export async function requireApiKey(c: Context, next: Next): Promise<Response | void> {
   const key = extractKey(c);
-  if (!key) return c.json({ ok: false, error: 'unauthorized' }, 401);
+  if (!key) return problem(c, 401, 'unauthorized', { headers: CHALLENGE });
 
   const keyHash = hashApiKey(key);
   const row = findApiKeyByHash(keyHash);
   if (!row || !safeEqualHex(row.key_hash, keyHash)) {
-    return c.json({ ok: false, error: 'unauthorized' }, 401);
+    return problem(c, 401, 'unauthorized', { headers: CHALLENGE });
   }
 
   if (row.enabled !== 1) {
-    return c.json({ ok: false, error: 'api_key_disabled' }, 401);
+    return problem(c, 401, 'api_key_disabled', { headers: CHALLENGE });
   }
 
   if (!matchIpAllowlist(clientIp(c), row.allowed_ips)) {
-    return c.json({ ok: false, error: 'ip_not_allowed' }, 403);
+    return problem(c, 403, 'ip_not_allowed');
   }
 
   markUsed(row);

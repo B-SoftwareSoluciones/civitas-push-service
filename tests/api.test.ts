@@ -14,7 +14,7 @@ process.env.ADMIN_USER = 'admin';
 process.env.TRUST_PROXY = 'false';
 const { app } = await import('../src/app');
 const { db } = await import('../src/db/client');
-const { createApiKey } = await import('../src/db/api-keys');
+const { createApiKey, setApiKeyEnabled } = await import('../src/db/api-keys');
 const { generateApiKey, matchIpAllowlist } = await import('../src/services/api-keys');
 const { createSessionValue, SESSION_COOKIE } = await import('../src/middleware/session');
 
@@ -242,4 +242,46 @@ test('notify only saves the device when saveDevice is true', async (context) => 
   const saved = await send({ deviceId: 'api-save', token: 'ExponentPushToken[api-save]', message: 'Hola', saveDevice: true }, firstKey, 'api-save');
   assert.ok([200, 202].includes(saved.status));
   assert.equal((db.prepare("SELECT id FROM devices WHERE id = 'api-save'").get() as { id: string }).id, 'api-save');
+});
+
+const problemShape = z.object({
+  type: z.string(), title: z.string(), status: z.number(), instance: z.string(),
+  detail: z.string().optional(), errors: z.array(z.object({ detail: z.string(), pointer: z.string() })).optional(),
+}).strict();
+async function problemOf(response: Response, status: number) {
+  assert.equal(response.status, status);
+  assert.ok(response.headers.get('content-type')?.startsWith('application/problem+json'), String(response.headers.get('content-type')));
+  const body = problemShape.parse(await response.json());
+  assert.equal(body.status, status);
+  return body;
+}
+
+test('global errors are RFC 9457 problem details', async () => {
+  const cookie = `${SESSION_COOKIE}=${createSessionValue()}`;
+  const missing = await app.request('/v1/devices');
+  assert.equal((await problemOf(missing, 401)).type, '/problems/unauthorized');
+  assert.ok(missing.headers.get('www-authenticate')?.startsWith('Bearer'));
+
+  const generated = generateApiKey();
+  const row = createApiKey({ name: 'disabled', prefix: generated.prefix, keyHash: generated.keyHash });
+  setApiKeyEnabled(row.id, false);
+  assert.equal((await problemOf(await app.request('/v1/devices', { headers: { 'x-api-key': generated.key } }), 401)).type, '/problems/api-key-disabled');
+
+  const session = await app.request('/api/jobs');
+  assert.equal((await problemOf(session, 401)).type, '/problems/unauthorized');
+  assert.equal(session.headers.get('www-authenticate'), null);
+
+  assert.equal((await problemOf(await app.request('/v1/no-existe', { headers: { 'x-api-key': firstKey } }), 404)).type, '/problems/route-not-found');
+  assert.equal((await problemOf(await send({ ...input, data: { oversized: 'x'.repeat(20_000) } }, firstKey, 'huge-problem'), 413)).type, '/problems/body-too-large');
+  const origin = await app.request('/api/keys', {
+    method: 'POST', headers: { cookie, origin: 'https://evil.example', 'content-type': 'application/json' }, body: JSON.stringify({ name: 'x' }),
+  });
+  assert.equal((await problemOf(origin, 403)).type, '/problems/forbidden-origin');
+});
+
+test('malformed JSON on notify is a problem details 400, not plain text', async () => {
+  const response = await app.request('/v1/notify', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': firstKey }, body: '{not json',
+  });
+  await problemOf(response, 400);
 });

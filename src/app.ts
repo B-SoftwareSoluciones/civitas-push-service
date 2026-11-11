@@ -8,6 +8,7 @@ import { config } from './config';
 import { requireApiKey } from './middleware/api-key';
 import { requestLogger } from './middleware/logger';
 import { requireSameOrigin } from './middleware/same-origin';
+import { problem, problemErrorHandler } from './problem';
 import { securityHeaders } from './middleware/security-headers';
 import { requireApiAuth, requireWebAuth } from './middleware/session';
 import { devicesRoutes } from './routes/devices';
@@ -18,11 +19,14 @@ import { batchesRoutes } from './routes/batches';
 
 export const app = new OpenAPIHono();
 
+app.onError(problemErrorHandler);
+app.notFound((c) => problem(c, 404, 'route_not_found'));
+
 app.use('*', requestLogger());
 app.use('*', securityHeaders);
 app.use('*', async (c, next) => bodyLimit({
   maxSize: c.req.method === 'POST' && /^\/v1\/batches\/?$/.test(c.req.path) ? 1024 * 1024 : 16 * 1024,
-  onError: (context) => context.json({ ok: false, error: 'body_too_large' }, 413),
+  onError: (context) => problem(context, 413, 'body_too_large'),
 })(c, next));
 
 app.use('/assets/*', serveStatic({ root: './' }));
