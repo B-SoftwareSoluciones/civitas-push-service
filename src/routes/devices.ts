@@ -3,6 +3,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { deleteDevice, listDevices, upsertDevice } from '../db/repository';
 import { Expo } from 'expo-server-sdk';
 import { queue } from '../queue/runtime';
+import { problemContent, validationHook } from '../problem';
 
 const deviceSchema = z
   .object({
@@ -36,18 +37,6 @@ const deviceResponseSchema = z
 
 const okResponseSchema = z.object({ ok: z.literal(true) }).openapi('OkResponse');
 
-const errorResponseSchema = z
-  .object({
-    error: z.string(),
-    details: z
-      .object({
-        formErrors: z.array(z.string()),
-        fieldErrors: z.record(z.array(z.string())),
-      })
-      .optional(),
-  })
-  .openapi('ErrorResponse');
-
 const jsonContent = <T extends z.ZodTypeAny>(schema: T) => ({
   content: { 'application/json': { schema } },
 });
@@ -71,7 +60,7 @@ const listRoute = createRoute({
       description: 'Listado de dispositivos',
     },
     401: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'API key ausente, inválida o deshabilitada',
     },
   },
@@ -95,11 +84,11 @@ const upsertRoute = createRoute({
       description: 'Dispositivo registrado o actualizado',
     },
     400: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'Cuerpo de la petición inválido',
     },
     401: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'API key ausente, inválida o deshabilitada',
     },
   },
@@ -123,11 +112,11 @@ const syncRoute = createRoute({
       description: 'Dispositivo sincronizado',
     },
     400: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'Cuerpo de la petición inválido',
     },
     401: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'API key ausente, inválida o deshabilitada',
     },
   },
@@ -150,18 +139,14 @@ const deleteRoute = createRoute({
       description: 'Dispositivo eliminado',
     },
     401: {
-      ...jsonContent(errorResponseSchema),
+      ...problemContent,
       description: 'API key ausente, inválida o deshabilitada',
     },
   },
 });
 
 export const devicesRoutes = new OpenAPIHono({
-  defaultHook: (result, c) => {
-    if (!result.success) {
-      return c.json({ error: 'invalid_body', details: result.error.flatten() }, 400);
-    }
-  },
+  defaultHook: validationHook,
 });
 
 devicesRoutes.openapi(listRoute, (c) => {

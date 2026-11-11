@@ -56,6 +56,8 @@ npm run api-key:revoke -- <id>
 
 Las claves son credenciales de servidor con acceso a los dispositivos. No deben distribuirse en una aplicación móvil pública.
 
+> **Identificadores:** `data.propertyId` y `data.residenceId` son **cadenas** (máx. 128 caracteres). Enviar un número en `propertyId` responde `400` con el puntero `#/data/propertyId`.
+
 ### Event Envelope
 
 `POST /v1/notify` acepta un **Event Envelope** propio de Civitas o el contrato plano anterior. En el envelope, el sobre identifica el evento y `notification` contiene solo los datos de entrega:
@@ -72,7 +74,7 @@ Las claves son credenciales de servidor con acceso a los dispositivos. No deben 
     "status": "inside",
     "visitor": "Juan Pérez",
     "propertyLabel": "Casa 4",
-    "propertyId": 456,
+    "propertyId": "456",
     "residenceId": "2"
   },
   "notification": {
@@ -130,7 +132,7 @@ Idempotency-Key: visita-123-aviso-1
     "visitor": "Juan Pérez",
     "propertyLabel": "Casa 4",
     "occurredAt": "2026-10-27T14:32:00-06:00",
-    "propertyId": 456,
+    "propertyId": "456",
     "residenceId": "2"
   },
   "priority": "high",
@@ -162,7 +164,7 @@ Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por d
 
 `saveDevice` es opcional y por defecto `false`: el push se envía sin guardar ni actualizar el dispositivo. Con `true` se hace upsert en `devices` y se reactiva el token si estaba retirado, igual que `POST /v1/devices`. Los lotes conservan su comportamiento actual y guardan sus dispositivos.
 
-`Idempotency-Key` es opcional, de 1 a 128 caracteres. Reutilizarla con el mismo contenido y la misma API key devuelve el resultado registrado sin reenviar; si el envío está en curso devuelve `409 notification_in_progress`; con otro contenido devuelve `409`. Usa el mismo valor al reintentar una solicitud cuyo resultado HTTP sea incierto. La deduplicación dura mientras se conserva el trabajo.
+`Idempotency-Key` es opcional, de 1 a 128 caracteres. Reutilizarla con el mismo contenido y la misma API key devuelve el resultado registrado sin reenviar; si el envío está en curso devuelve `409 notification-in-progress`; con otro contenido devuelve `409`. Usa el mismo valor al reintentar una solicitud cuyo resultado HTTP sea incierto. La deduplicación dura mientras se conserva el trabajo.
 
 | Código | Significado |
 | --- | --- |
@@ -174,6 +176,37 @@ Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por d
 | `413` | Cuerpo HTTP demasiado grande |
 | `502` | Error en el envío inmediato a Expo |
 | `503` | Cola llena; reintentar después del intervalo indicado |
+
+#### Errores (RFC 9457)
+
+Toda respuesta de error usa `Content-Type: application/problem+json` con los campos `type`, `title`, `status`, `detail` e `instance`. `type` es una URI relativa estable (`/problems/<codigo>`); los errores genéricos usan `about:blank`. Los errores de validación añaden `errors`, una lista de `{ detail, pointer }` donde `pointer` es un JSON Pointer (`#/data/propertyId`).
+
+```json
+{
+  "type": "/problems/invalid-body",
+  "title": "Cuerpo de la solicitud inválido",
+  "status": 400,
+  "detail": "El cuerpo de la solicitud no cumple el esquema esperado.",
+  "instance": "/v1/notify",
+  "errors": [
+    { "detail": "Number must be greater than or equal to 1", "pointer": "#/version" },
+    { "detail": "Expected string, received number", "pointer": "#/data/propertyId" }
+  ]
+}
+```
+
+| `type` | Estado |
+| --- | --- |
+| `/problems/invalid-body`, `invalid-query`, `invalid-param`, `invalid-header`, `invalid-idempotency-key`, `invalid-expo-token`, `payload-too-large`, `device-not-registered` | `400` |
+| `/problems/unauthorized`, `api-key-disabled` | `401` (con `WWW-Authenticate: Bearer` en `/v1`) |
+| `/problems/ip-not-allowed`, `forbidden-origin` | `403` |
+| `/problems/not-found`, `route-not-found` | `404` |
+| `/problems/idempotency-conflict`, `notification-in-progress`, `job-not-retryable`, `immediate-job-not-retryable`, `job-expired` | `409` |
+| `/problems/body-too-large` | `413` |
+| `/problems/send-outcome-unknown`, `push-provider-error` (el error de Expo va en `detail`) | `502` |
+| `/problems/queue-full` | `503` (con `Retry-After`) |
+
+Las respuestas exitosas conservan su forma actual.
 
 ### Lotes persistentes
 
@@ -187,7 +220,7 @@ Los eventos con `data.type: "panic"` o `data.type: "panic.triggered"` usan por d
   "data": { "screen": "Home" },
   "devices": [
     { "deviceId": "device-1", "token": "ExponentPushToken[uno]" },
-    { "deviceId": "device-2", "token": "ExponentPushToken[dos]", "data": { "propertyId": 456 } }
+    { "deviceId": "device-2", "token": "ExponentPushToken[dos]", "data": { "propertyId": "456" } }
   ]
 }
 ```
@@ -227,6 +260,14 @@ Un lote ajeno devuelve `404`. El panel administrativo puede consultar todos los 
 - `/doc` y `/ui`: OpenAPI y Swagger, con sesión administrativa.
 
 Un error `DeviceNotRegistered` retira el token, deshabilita sus dispositivos y termina trabajos pendientes para ese token. Un nuevo registro explícito del dispositivo permite volver a utilizarlo. Enviar una notificación no borra la plataforma ni simula una conexión del dispositivo.
+
+## Documentación Swagger
+
+`/ui` (Swagger UI) y `/doc` (OpenAPI 3) requieren sesión del panel. Cada caso de uso de notificaciones tiene su propio ejemplo de petición: visita creada, registrada, entrada y salida, pánico, anuncio, notificación genérica, formato plano y los tres lotes (pánico, anuncio y visita). Cada operación documenta además sus respuestas de éxito y todos los problem details posibles con ejemplos. Los ejemplos se validan contra los esquemas reales en `tests/openapi.test.ts`, así que no se desfasan.
+
+## Arquitectura de errores (Result Pattern)
+
+Los servicios (`buildMessage`, `validateIdempotency`, `runNotify`, `runBatch`) no lanzan errores esperados: devuelven `Result<T>` (`src/result.ts`), que es `{ ok: true, value }` o `{ ok: false, error: { code, status, retryAfterMs } }`. `attempt()` convierte los `QueueError` del almacén de la cola en `Result`; cualquier otro error (un bug) sigue propagándose y termina en `500`. Las rutas traducen el fallo con `failureProblem()` a `application/problem+json`, igual que antes (incluido `Retry-After` en `503`). La validación de entrada sigue siendo Zod (`@hono/zod-openapi`) en el borde HTTP.
 
 ## Panel
 
