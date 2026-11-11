@@ -1,6 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { notifySchema, buildMessage, validateIdempotency } from './notifications';
 import { queue } from '../queue/runtime';
+import { attempt, type Result } from '../result';
+import type { ExpoPushMessage } from 'expo-server-sdk';
 
 export const batchSchema = notifySchema.omit({ deviceId: true, token: true, saveDevice: true }).extend({
   name: z.string().trim().min(1).max(128).optional(),
@@ -22,10 +24,14 @@ export const pageSchema = z.object({
   offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
 });
 
-export function runBatch(input: z.infer<typeof batchSchema>, owner: string, key?: string) {
-  validateIdempotency(key);
-  const entries = input.devices.map(device => ({ deviceId: device.deviceId,
-    message: buildMessage({ ...input, ...device, data: { ...input.data, ...device.data } }),
-  }));
-  return { ok: true as const, batch: queue.enqueueBatch(owner, entries, input.name ?? 'Lote de notificaciones', key) };
+export function runBatch(input: z.infer<typeof batchSchema>, owner: string, key?: string): Result<{ batch: ReturnType<typeof queue.enqueueBatch> }> {
+  const validKey = validateIdempotency(key);
+  if (!validKey.ok) return validKey;
+  const entries: { deviceId: string; message: ExpoPushMessage }[] = [];
+  for (const device of input.devices) {
+    const built = buildMessage({ ...input, ...device, data: { ...input.data, ...device.data } });
+    if (!built.ok) return built;
+    entries.push({ deviceId: device.deviceId, message: built.value });
+  }
+  return attempt(() => ({ batch: queue.enqueueBatch(owner, entries, input.name ?? 'Lote de notificaciones', key) }));
 }

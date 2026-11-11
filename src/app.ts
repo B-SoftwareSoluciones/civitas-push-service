@@ -8,6 +8,7 @@ import { config } from './config';
 import { requireApiKey } from './middleware/api-key';
 import { requestLogger } from './middleware/logger';
 import { requireSameOrigin } from './middleware/same-origin';
+import { problem, problemErrorHandler } from './problem';
 import { securityHeaders } from './middleware/security-headers';
 import { requireApiAuth, requireWebAuth } from './middleware/session';
 import { devicesRoutes } from './routes/devices';
@@ -15,14 +16,18 @@ import { notifyRoutes } from './routes/notify';
 import { webRoutes } from './routes/web';
 import { queue } from './queue/runtime';
 import { batchesRoutes } from './routes/batches';
+import { openApiTags } from './docs/notifications';
 
 export const app = new OpenAPIHono();
+
+app.onError(problemErrorHandler);
+app.notFound((c) => problem(c, 404, 'route_not_found'));
 
 app.use('*', requestLogger());
 app.use('*', securityHeaders);
 app.use('*', async (c, next) => bodyLimit({
   maxSize: c.req.method === 'POST' && /^\/v1\/batches\/?$/.test(c.req.path) ? 1024 * 1024 : 16 * 1024,
-  onError: (context) => context.json({ ok: false, error: 'body_too_large' }, 413),
+  onError: (context) => problem(context, 413, 'body_too_large'),
 })(c, next));
 
 app.use('/assets/*', serveStatic({ root: './' }));
@@ -56,14 +61,18 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'ApiKeyAuth', {
   description: 'También se acepta `Authorization: Bearer <api-key>`.',
 });
 
-app.doc('/doc', {
+export const openApiConfig = {
   openapi: '3.0.0',
   info: {
     title: 'Civitas Access API',
     version: '1.0.0',
     description:
-      'API de registro de dispositivos y envío de notificaciones push (Expo). Todas las rutas /v1 requieren una API key.',
+      'API de registro de dispositivos y envío de notificaciones push (Expo). Todas las rutas /v1 requieren una API key. ' +
+      'Los errores usan RFC 9457 (`application/problem+json`). `propertyId` y `residenceId` son siempre cadenas.',
   },
-});
+  tags: openApiTags,
+};
+
+app.doc('/doc', openApiConfig);
 
 app.get('/ui', swaggerUI({ url: '/doc' }));

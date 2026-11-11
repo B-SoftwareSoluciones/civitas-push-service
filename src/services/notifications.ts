@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 
 import { Expo, type ExpoPushMessage } from 'expo-server-sdk';
-import { QueueError } from '../queue/store';
+import { fail, ok, type Result } from '../result';
 
 const notifyDataSchema = z
   .object({
@@ -15,8 +15,14 @@ const notifyDataSchema = z
     visitor: z.string().max(256).optional().openapi({ example: 'Juan Pérez' }),
     propertyLabel: z.string().max(256).optional().openapi({ example: 'Casa 4' }),
     occurredAt: z.string().max(64).optional().openapi({ example: '2026-10-27T14:32:00-06:00' }),
-    propertyId: z.number().int().optional().openapi({ example: 456 }),
-    residenceId: z.string().max(128).optional().openapi({ example: '2' }),
+    propertyId: z.string().max(128).optional().openapi({
+      example: '456',
+      description: 'Identificador de la propiedad. Es una cadena (igual que `residenceId`); no se aceptan números.',
+    }),
+    residenceId: z.string().max(128).optional().openapi({
+      example: '2',
+      description: 'Identificador de la residencia. Es una cadena.',
+    }),
   })
   .passthrough()
   .openapi('NotifyData');
@@ -185,12 +191,13 @@ export function normalizeNotifyInput(input: NotifyRequestInput): { input: Notify
   };
 }
 
-export function validateIdempotency(key?: string) {
-  if (key !== undefined && (!key.trim() || key.length > 128)) throw new QueueError('invalid_idempotency_key', 400);
+export function validateIdempotency(key?: string): Result<void> {
+  if (key !== undefined && (!key.trim() || key.length > 128)) return fail('invalid_idempotency_key', 400);
+  return ok(undefined);
 }
 
-export function buildMessage(input: NotifyInput): ExpoPushMessage {
-  if (!Expo.isExpoPushToken(input.token)) throw new QueueError('invalid_expo_token', 400);
+export function buildMessage(input: NotifyInput): Result<ExpoPushMessage> {
+  if (!Expo.isExpoPushToken(input.token)) return fail('invalid_expo_token', 400);
   const isPanic = input.data?.type ? PANIC_EVENT_TYPES.has(input.data.type) : false;
   const isAnnouncement = input.data?.type ? ANNOUNCEMENT_EVENT_TYPES.has(input.data.type) : false;
   const data = {
@@ -211,6 +218,6 @@ export function buildMessage(input: NotifyInput): ExpoPushMessage {
     ...(channelId ? { channelId } : {}),
     ...(interruptionLevel ? { interruptionLevel } : {}),
   };
-  if (Buffer.byteLength(JSON.stringify(message), 'utf8') > 4096) throw new QueueError('payload_too_large', 400);
-  return message;
+  if (Buffer.byteLength(JSON.stringify(message), 'utf8') > 4096) return fail('payload_too_large', 400);
+  return ok(message);
 }

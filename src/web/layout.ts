@@ -440,6 +440,18 @@ ${content}
   </div>`;
 }
 
+export function problemTextScript(): string {
+  return `<script>
+    window.__problemText = function (body) {
+      body = body || {};
+      var text = body.detail || body.title || 'desconocido';
+      var errors = Array.isArray(body.errors) ? body.errors.slice(0, 3) : [];
+      if (!errors.length) return text;
+      return text + ' (' + errors.map(function (e) { return e.pointer + ': ' + e.detail; }).join(', ') + ')';
+    };
+  </script>`;
+}
+
 export function shellScript(): string {
   return `<script>
     (function () {

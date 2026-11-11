@@ -114,8 +114,8 @@ export function apiKeysScript(): string {
         })
           .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
           .then(function (out) {
-            if (!out.ok || !out.data.ok) {
-              show('err', 'Error: ' + (out.data.error || 'desconocido'));
+            if (!out.ok) {
+              show('err', 'Error: ' + window.__problemText(out.data));
               return;
             }
             document.getElementById('key-name').value = '';

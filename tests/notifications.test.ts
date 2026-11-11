@@ -13,6 +13,12 @@ import {
   type NotifyInput,
 } from '../src/services/notifications';
 
+function build(input: NotifyInput) {
+  const result = buildMessage(input);
+  assert.ok(result.ok, 'buildMessage should succeed');
+  return result.value;
+}
+
 const base = {
   deviceId: 'visit-device',
   token: 'ExponentPushToken[visit-test]',
@@ -29,11 +35,11 @@ test('visit events default to VisitStatus and preserve visit data', () => {
       visitor: 'Juan Pérez',
       propertyLabel: 'Casa 4',
       occurredAt: '2026-10-27T14:32:00-06:00',
-      propertyId: 456,
+      propertyId: '456',
       residenceId: '2',
     },
   };
-  const message = buildMessage(input);
+  const message = build(input);
   assert.equal(message.data?.screen, 'VisitStatus');
   assert.equal(message.data?.visitId, 'VIS-0001');
   assert.equal(message.data?.status, 'inside');
@@ -58,13 +64,13 @@ test('resolveScreen keeps explicit screens and handles panic and legacy payloads
 });
 
 test('saveDevice is not included in the Expo message', () => {
-  const message = buildMessage({ ...base, saveDevice: true, data: { type: 'visit_exit', status: 'outside' } });
+  const message = build({ ...base, saveDevice: true, data: { type: 'visit_exit', status: 'outside' } });
   assert.equal(message.data?.screen, 'VisitStatus');
   assert.equal('saveDevice' in message, false);
 });
 
 test('panic notifications default to the emergency sound, channel and interruption level', () => {
-  const message = buildMessage({ ...base, data: { type: 'panic', residenceId: '2' } });
+  const message = build({ ...base, data: { type: 'panic', residenceId: '2' } });
   assert.equal(message.sound, PANIC_SOUND);
   assert.equal(message.channelId, PANIC_CHANNEL);
   assert.equal(message.interruptionLevel, PANIC_INTERRUPTION_LEVEL);
@@ -73,7 +79,7 @@ test('panic notifications default to the emergency sound, channel and interrupti
 });
 
 test('panic notifications respect explicit sound, channel and interruption level', () => {
-  const message = buildMessage({
+  const message = build({
     ...base,
     sound: 'custom-alarm.caf',
     channelId: 'custom-channel',
@@ -87,7 +93,7 @@ test('panic notifications respect explicit sound, channel and interruption level
 });
 
 test('regular notifications keep the default sound and do not inherit panic settings', () => {
-  const message = buildMessage({ ...base, data: { type: 'visit_entry' } });
+  const message = build({ ...base, data: { type: 'visit_entry' } });
   assert.equal(message.sound, 'default');
   assert.equal('channelId' in message, false);
   assert.equal('interruptionLevel' in message, false);
@@ -105,7 +111,7 @@ test('event envelope normalizes delivery, event metadata and idempotency', () =>
       status: 'inside',
       visitor: 'Juan Pérez',
       propertyLabel: 'Casa 4',
-      propertyId: 456,
+      propertyId: '456',
       residenceId: '2',
     },
     notification: {
@@ -120,7 +126,7 @@ test('event envelope normalizes delivery, event metadata and idempotency', () =>
 
   const normalized = normalizeNotifyInput(envelope);
   assert.equal(normalized.idempotencyKey, 'evt-visit-entry-1');
-  const message = buildMessage(normalized.input);
+  const message = build(normalized.input);
   assert.equal(message.data?.type, 'visit.entry');
   assert.equal(message.data?.screen, 'VisitStatus');
   assert.equal(message.data?.visitId, 'VIS-0001');
@@ -143,7 +149,7 @@ test('generic event envelope does not open a screen and announcement opens Annou
     source: 'civitas.access',
     notification: { ...base },
   })).input;
-  assert.equal(buildMessage(generic).data?.screen, 'None');
+  assert.equal(build(generic).data?.screen, 'None');
 
   const announcement = normalizeNotifyInput(envelopeSchema.parse({
     id: 'evt-announcement-1',
@@ -158,7 +164,7 @@ test('generic event envelope does not open a screen and announcement opens Annou
       screen: 'Announcements',
     },
   })).input;
-  const message = buildMessage(announcement);
+  const message = build(announcement);
   assert.equal(message.data?.screen, 'Announcements');
   assert.equal(message.data?.announcementId, 'ANN-0001');
   assert.equal(message.data?.title, 'Anuncio de la administración');

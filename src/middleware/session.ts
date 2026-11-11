@@ -3,6 +3,7 @@ import type { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
 
 import { config } from '../config';
+import { problem } from '../problem';
 
 export const SESSION_COOKIE = 'ms_session';
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
@@ -42,6 +43,6 @@ export async function requireWebAuth(c: Context, next: Next): Promise<Response |
 }
 
 export async function requireApiAuth(c: Context, next: Next): Promise<Response | void> {
-  if (!hasValidSession(c)) return c.json({ error: 'unauthorized' }, 401);
+  if (!hasValidSession(c)) return problem(c, 401, 'unauthorized');
   await next();
 }
